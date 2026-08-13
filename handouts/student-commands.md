@@ -490,11 +490,31 @@ Why Airflow can be green while `dbt build` shows WARN=2:
 In short: Airflow is a **stricter gate on must-pass tests only**, not a full rebuild+all-tests like `dbt build`. You already saw the WARN group in Module 1 with `dbt test --select tag:warn_only`.
 
 
-### CLI DAG tests
+### CLI DAG tests (`airflow dags test`)
 
-Use a new timestamp each re-run (repo root, Airflow venv + `DBT_*` already exported):
+This is **Airflow’s** command-line way to run a DAG once. It is **not** `dbt test`.
+
+| | **CLI:** `airflow dags test …` | **UI:** Trigger DAG |
+|--|--------------------------------|---------------------|
+| Where | Terminal | Airflow web UI |
+| What it does | Runs that DAG’s tasks **once** for a given date | Same idea: one manual run |
+| Scheduler needed? | No — useful when UI is down or slow | Needs webserver / standalone running |
+| Good for | Quick check that DAGs + dbt wiring work | Showing the graph and task logs in class |
 
 ```bash
+airflow dags test <dag_id> <logical_date>
+```
+
+| Piece | Meaning |
+|-------|---------|
+| `airflow dags test` | “Execute this DAG once from the CLI” |
+| `<dag_id>` | Name of the DAG file’s `dag_id` (e.g. `dbt_core_run_test`) |
+| `<logical_date>` | Timestamp Airflow uses for this run (any valid datetime) |
+
+Use a **new** timestamp each re-run so Airflow treats it as a fresh run:
+
+```bash
+# repo root; Airflow venv + AIRFLOW_HOME + DBT_* already exported
 RUN_DATE="$(date -u +%Y-%m-%dT%H:%M:%S)"
 
 airflow dags test demo_schedule_retries "$RUN_DATE"
@@ -502,7 +522,11 @@ airflow dags test dbt_core_run_test "$RUN_DATE"
 airflow dags test dbt_core_e2e_pipeline "$RUN_DATE"
 ```
 
-### UI
+**What “success” looks like:** the command finishes without a Python/task exception; for dbt DAGs you should see `dbt run` then `dbt test --select tag:critical` output in the terminal (same critical-only selection as above).
+
+**What it is not:** it does not replace Module 1’s `dbt test` / `dbt build`. Those are dbt commands. Here Airflow is the orchestrator calling dbt inside its tasks.
+
+### UI (same DAGs, in the browser)
 
 1. Open Airflow UI (URL shared in class).  
 2. Trigger: `demo_schedule_retries`, `dbt_core_run_test`, `dbt_core_e2e_pipeline`.  
