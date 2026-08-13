@@ -99,6 +99,7 @@ with DAG(
     start_date=datetime(2024, 1, 1),
     schedule=None,  # run only when Triggered (no cron)
     catchup=False,
+    is_paused_upon_creation=False,  # show as active in UI on first load
     default_args=default_args,
     tags=["demo", "airflow", "olist"],
 ) as dag:

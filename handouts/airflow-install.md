@@ -55,6 +55,8 @@ dbt venv + `~/.dbt/env.sh` must already work.
 
 If Airflow is already running, **restart** it after copying DAGs (stop `standalone`, start again — or restart the `tmux` session).
 
+If a course DAG shows as **paused** in the UI, toggle it on (or: `airflow dags unpause <dag_id>`).
+
 ---
 
 ## 3. Start UI
