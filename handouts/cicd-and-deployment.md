@@ -74,7 +74,7 @@ Open **Actions** (or the Checks tab on the PR). You should see **one** CI job: *
 | **2. Gate = critical inside build** | Critical tests fail the job if they fail (`severity: error`). |
 | **3. Promotion by rebuild** | dbt does **not** move tables. It builds again into the prod schema. Two `COUNT(*)` queries (below). |
 
-**If asked (say only):** rollback = revert the merge on `main` and let Deploy Prod run again.
+**Rollback:** revert the merge commit on `main` and let **dbt Deploy Prod** run again.
 
 ---
 

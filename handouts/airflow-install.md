@@ -55,7 +55,7 @@ If Airflow is already running, **restart** it after copying DAGs (stop `standalo
 
 ---
 
-## 3. Start UI (optional)
+## 3. Start UI
 
 ```bash
 export AIRFLOW_HOME=~/training/airflow_home

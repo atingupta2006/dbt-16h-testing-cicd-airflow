@@ -55,11 +55,9 @@ SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;
 
 Trigger `dbt_orchestrated_pipeline`. Graph: layers → critical → warn_only + docs → publish.
 
-### E7 — Optional failure drill (~20 min)
+### E7 — Failure drill (~20 min)
 
-Temporarily break a **critical** test (same idea as Module 1) → red gate or red `test_critical` → restore → green.
-
-Skip E7 if behind.
+Temporarily break a **critical** test (same idea as Module 1) → red CI or red `test_critical` → restore → green.
 
 ---
 

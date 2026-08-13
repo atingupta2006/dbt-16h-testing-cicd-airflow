@@ -213,7 +213,7 @@ Done. PASS=35 WARN=2 ERROR=0 SKIP=0 TOTAL=37
 
 #### 1e. Interpret and validate a WARN (or FAIL)
 
-When the summary shows WARN or ERROR, walk this path so you can **prove** what broke (same idea for FAIL in the optional fail→fix loop).
+When the summary shows WARN or ERROR, walk this path so you can **prove** what broke (same idea for FAIL in the fail→fix loop).
 
 **Step 1 — Read the status line (not only the summary)**
 
@@ -293,7 +293,7 @@ dbt show --limit 10 --inline "select order_id, order_status, order_delivered_cus
 
 You should see real rows (e.g. `PAYMENT_VALUE = 0`). That proves the WARN is about **data**, not a broken test definition.
 
-Optional same checks in Snowflake worksheet (dev schema) — same idea, without dbt:
+Same checks in Snowflake worksheet (dev schema) — same idea, without dbt:
 
 ```sql
 SELECT order_id, payment_value
@@ -318,7 +318,7 @@ dbt test --select "test_type:generic,test_name:not_null_if"
 
 **Expect:** empty (or no) bad rows on the mart; staging still WARNs; mart `not_null_if` PASSes.
 
-Optional: `dbt test --select tag:critical` should also be green (`PASS=3 WARN=0 ERROR=0`) because those must-pass tests (including mart checks) have clean data.
+Also confirm: `dbt test --select tag:critical` stays green (`PASS=3 WARN=0 ERROR=0`) because those must-pass tests (including mart checks) have clean data.
 
 **Quick checklist**
 
@@ -381,7 +381,7 @@ Parameters: `condition_column`, `condition_value` → here, when `order_status =
 
 In this project: `critical` ↔ `severity: error`; `warn_only` ↔ `severity: warn`.
 
-### Fail → fix (optional)
+### Fail → fix
 
 Use the same interpret path as **§1e**, but expect **FAIL / ERROR** instead of WARN.
 

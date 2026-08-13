@@ -80,7 +80,7 @@ dbt_run → dbt_test_critical → dbt_build → dbt_docs_generate
 | `dbt_build` | `build --target dev` | All tests too; `WARN=2` OK |
 | `dbt_docs_generate` | `docs generate` | Writes `dbt_project/target/index.html` (no docs server in class) |
 
-If time is short, stop after **run + critical test** and only mention the last two tasks.
+Walk the graph left to right. The first two tasks show the core pattern (`run` then must-pass tests); `build` and `docs generate` complete the same DAG.
 
 **UI:** Trigger → open `dbt_test_critical` log.  
 **CLI:** `airflow dags test dbt_core_commands "$RUN_DATE"`
