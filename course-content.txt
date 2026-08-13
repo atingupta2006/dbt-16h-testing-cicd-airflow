@@ -1,0 +1,16 @@
+Airflow in Snowflake and DBT
+
+Advanced Testing, CI/CD & Orchestration 
+Topics: 
+•	Advanced testing (custom generic tests) 
+•	Test strategies in production 
+•	CI/CD workflows (Git-based) 
+•	Deployment strategies 
+
+Airflow Integration  
+•	Introduction to Apache Airflow 
+•	DAGs, scheduling, retries 
+•	Running DBT using Airflow (DBT run/test) 
+•	Dependency orchestration (end-to-end pipeline) 
+
+End to End Implementation (using datasets) with DBT Core + Apache Airflow Deployment -Demonstration

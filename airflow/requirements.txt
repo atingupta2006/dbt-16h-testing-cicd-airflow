@@ -1,0 +1,3 @@
+# Pinned for trainer Airflow venv only (do not mix with dbt venv).
+# Install with official constraints — see internals/TRAINER-ENV-SETUP-UBUNTU-AZURE.md
+apache-airflow==2.9.3

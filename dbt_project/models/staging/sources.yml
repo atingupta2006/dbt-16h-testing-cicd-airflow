@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: olist_raw
+    description: Raw Olist ecommerce tables in Snowflake
+    database: OLIST_DB
+    schema: RAW
+    tables:
+      - name: customers
+      - name: orders
+      - name: order_items
+      - name: products
+      - name: payments

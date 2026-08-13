@@ -1,0 +1,82 @@
+# =============================================================================
+# Student-shared repo ignores
+# Anything listed here stays on the trainer machine and must NOT be pushed
+# for student clones (post-training hands-on uses the shared paths only).
+# =============================================================================
+
+# --- Trainer-only (do not share with students) ---
+internals/
+GH/instructor/
+
+# Local course authoring / planning leftovers
+**/dry-run-notes.md
+**/known-failures.md
+**/*SECRET*
+**/*secret*
+**/credentials*
+**/pax-details*
+**/participants*
+internals/vm-env.sh
+**/vm-env.sh
+
+# --- Secrets & local credentials ---
+.env
+.env.*
+!.env.example
+**/env.sh
+**/.dbt/env.sh
+profiles.yml
+**/.dbt/profiles.yml
+!**/profiles.yml.example
+*.pem
+*.p8
+*.key
+
+# --- Python ---
+.venv/
+venv/
+env/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# --- dbt runtime ---
+**/target/
+**/dbt_packages/
+**/logs/
+**/.ci_profiles/
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+
+# --- Airflow local runtime ---
+airflow_home/
+**/airflow_home/
+airflow/logs/
+**/airflow.db
+**/airflow.cfg
+**/webserver_config.py
+**/simple_auth_manager_passwords.json.generated
+**/standalone_admin_password.txt
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# --- Misc ---
+*.log
+*.tmp
+.coverage
+htmlcov/
+
+# Local Cursor rules (trainer machine)
+.cursor/
