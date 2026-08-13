@@ -10,7 +10,7 @@ Model layers in `dbt_project/models/`: **staging** → **intermediate** → **ma
 
 Dataset and flow: [`olist-data-and-flow.md`](olist-data-and-flow.md)  
 Airflow install (once): [`airflow-install.md`](airflow-install.md)  
-Concept only (not a lab): [`incremental-quick-look.md`](incremental-quick-look.md)
+Incremental models: [`incremental-quick-look.md`](incremental-quick-look.md)
 
 **How to read dbt summaries:** look at the last line, e.g. `Done. PASS=35 WARN=2 ERROR=0`.  
 **ERROR=0** means nothing blocked the run. **WARN** means “heads-up” (dirty rows), not a hard stop.  

@@ -14,7 +14,7 @@ Course project for advanced testing, GitHub Actions CI/CD, and Airflow with dbt 
 | `handouts/student-commands.md` | Commands to follow along |
 | `handouts/olist-data-and-flow.md` | Olist schema and end-to-end data flow |
 | `handouts/airflow-install.md` | Install Airflow (separate venv) for class |
-| `handouts/incremental-quick-look.md` | Concept only: how incremental models work (not a lab) |
+| `handouts/incremental-quick-look.md` | Incremental models (short example) |
 | `course-content.txt` | Course topics |
 | `.env.example` | Names of environment variables you will need |
 | `dbt_project/profiles.yml.example` | Example dbt profile (`dev` / `prod`) |
