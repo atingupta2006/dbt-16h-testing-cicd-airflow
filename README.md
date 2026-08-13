@@ -11,6 +11,7 @@ Course project for advanced testing, GitHub Actions CI/CD, and Airflow with dbt 
 | `dbt_project/` | dbt models (staging → intermediate → marts) and custom generic tests |
 | `airflow/dags/` | Airflow DAGs used in class |
 | `.github/workflows/` | PR CI and production deploy workflows |
+| `handouts/README.md` | Handout reading order |
 | `handouts/student-commands.md` | Command index |
 | `handouts/olist-data-and-flow.md` | Olist schema and data flow |
 | `handouts/cicd-and-deployment.md` | GitHub Actions CI + prod deploy |
@@ -24,7 +25,7 @@ Course project for advanced testing, GitHub Actions CI/CD, and Airflow with dbt 
 
 ## How to use
 
-1. Open `handouts/olist-data-and-flow.md` for the dataset picture.  
+1. Open `handouts/README.md` for reading order, then `olist-data-and-flow.md`.  
 2. Open `handouts/student-commands.md` as the command index.  
 3. CI/CD: `handouts/cicd-and-deployment.md`. Airflow: `handouts/airflow-install.md` then `handouts/airflow-dags.md`.  
 4. Use the connection details shared in class for Snowflake and related tools.

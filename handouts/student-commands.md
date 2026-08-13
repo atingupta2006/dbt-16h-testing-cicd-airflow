@@ -8,7 +8,7 @@ Use connection values shared in class. Prefer Linux (Ubuntu) for Airflow section
 
 Model layers in `dbt_project/models/`: **staging** → **intermediate** → **marts**.
 
-Dataset and flow: [`olist-data-and-flow.md`](olist-data-and-flow.md)  
+Dataset and flow: [`olist-data-and-flow.md`](olist-data-and-flow.md) · Handout order: [`README.md`](README.md)  
 CI/CD and deploy: [`cicd-and-deployment.md`](cicd-and-deployment.md)  
 Airflow install (once): [`airflow-install.md`](airflow-install.md)  
 Airflow DAGs: [`airflow-dags.md`](airflow-dags.md)  
