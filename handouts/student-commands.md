@@ -420,28 +420,13 @@ SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;      -- prod (after deploy)
 ## 3. Airflow + dbt Core
 
 **Install (copy the three class DAGs first):** [`airflow-install.md`](airflow-install.md)  
-**DAGs (use these three):** [`airflow-dags.md`](airflow-dags.md)
+**DAGs:** [`airflow-dags.md`](airflow-dags.md) — run them from the **Airflow UI** (Graph → Trigger → task Log).
 
 | Order | DAG id | What it shows |
 |------:|--------|---------------|
 | 1 | `demo_schedule_retries` | Schedule + retries (no dbt) |
 | 2 | `dbt_core_commands` | `run` → `tag:critical` → `build` → `docs generate` |
 | 3 | `dbt_orchestrated_pipeline` | Layered run + critical gate + warn_only + publish |
-
-```bash
-export AIRFLOW_HOME=~/training/airflow_home
-source ~/training/venvs/airflow/bin/activate
-export DBT_BIN="$(pwd)/dbt_project/.venv/bin/dbt"
-export DBT_PROJECT_DIR="$(pwd)/dbt_project"
-export DBT_ENV_FILE="$HOME/.dbt/env.sh"
-
-RUN_DATE="$(date -u +%Y-%m-%dT%H:%M:%S)"
-airflow dags test demo_schedule_retries "$RUN_DATE"
-airflow dags test dbt_core_commands "$RUN_DATE"
-airflow dags test dbt_orchestrated_pipeline "$RUN_DATE"
-```
-
-`airflow dags test` runs a **DAG** once from the CLI — it is **not** `dbt test`. Full explanation: [`airflow-dags.md`](airflow-dags.md).
 
 ---
 

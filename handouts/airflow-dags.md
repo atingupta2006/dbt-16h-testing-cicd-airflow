@@ -3,9 +3,9 @@
 Install first: [`airflow-install.md`](airflow-install.md)  
 Command index: [`student-commands.md`](student-commands.md) §3
 
-**Start here (new to Airflow):** DAG 1 → DAG 2 → DAG 3.
+**Order:** DAG 1 → DAG 2 → DAG 3.
 
-Copy DAG files into `$AIRFLOW_HOME/dags` after clone/pull, then restart Airflow if it is already running.
+Copy DAG files into `$AIRFLOW_HOME/dags` after clone/pull, then restart Airflow if it is already running. Set `DBT_*` in the **same shell** that starts Airflow (see install handout).
 
 ---
 
@@ -25,26 +25,16 @@ Copy DAG files into `$AIRFLOW_HOME/dags` after clone/pull, then restart Airflow 
 |------|---------|
 | **DAG** | The pipeline graph (tasks + order) |
 | **Task** | One box (here: a Bash command, often `dbt …`) |
-| **Trigger** | Manual run from the UI |
-| **`airflow dags test`** | Run the DAG **once from the terminal** — **not** `dbt test` |
-| **Logical date** | Timestamp you pass to `dags test` (use a **new** one each re-run) |
+| **Trigger** | Manual run from the UI (play button) |
 
 ---
 
-## Every shell (before CLI or after restart)
+## How to run a DAG (UI)
 
-```bash
-export AIRFLOW_HOME=~/training/airflow_home
-source ~/training/venvs/airflow/bin/activate
-cd /path/to/dbt-16h-testing-cicd-airflow
-export DBT_BIN="$(pwd)/dbt_project/.venv/bin/dbt"
-export DBT_PROJECT_DIR="$(pwd)/dbt_project"
-export DBT_ENV_FILE="$HOME/.dbt/env.sh"
-```
-
-```bash
-RUN_DATE="$(date -u +%Y-%m-%dT%H:%M:%S)"
-```
+1. Open the Airflow URL from class → login.  
+2. Open the DAG → **Graph**.  
+3. **Trigger** (play button).  
+4. Click a task → **Log**.
 
 ---
 
@@ -56,12 +46,9 @@ RUN_DATE="$(date -u +%Y-%m-%dT%H:%M:%S)"
 hello
 ```
 
-Point at in code: `schedule="@daily"`, `retries`, `retry_delay`.
+In code: `schedule="@daily"`, `retries`, `retry_delay`.
 
-**UI:** Trigger → task `hello` success.  
-**CLI:** `airflow dags test demo_schedule_retries "$RUN_DATE"`
-
-**Success:** `Airflow demo OK at …` in the log.
+**Success:** task `hello` green; log shows `Airflow demo OK at …`.
 
 ---
 
@@ -80,16 +67,13 @@ dbt_run → dbt_test_critical → dbt_build → dbt_docs_generate
 | `dbt_build` | `build --target dev` | All tests too; `WARN=2` OK |
 | `dbt_docs_generate` | `docs generate` | Writes `dbt_project/target/index.html` |
 
-Walk the graph left to right. The first two tasks show the core pattern (`run` then must-pass tests); `build` and `docs generate` complete the same DAG.
-
-**UI:** Trigger → open `dbt_test_critical` log.  
-**CLI:** `airflow dags test dbt_core_commands "$RUN_DATE"`
+Walk the graph left to right. Open the `dbt_test_critical` log after Trigger.
 
 ---
 
 ## DAG 3 — `dbt_orchestrated_pipeline`
 
-**TOC:** dependency orchestration + end-to-end (this is the “star” DAG).
+**TOC:** dependency orchestration + end-to-end (star DAG).
 
 ```text
 raw_data_ready → run_staging → run_intermediate → run_marts → test_critical
@@ -104,12 +88,10 @@ raw_data_ready → run_staging → run_intermediate → run_marts → test_criti
 | `test_critical` | Hard gate (`WARN=0`) |
 | `test_warn_only` | Heads-up (`WARN=2` OK, ERROR=0) |
 | `docs_generate` | Catalog after the gate |
-| `publish_ready` | Stub — “consumers may refresh” |
+| `publish_ready` | Stub — consumers may refresh |
 
-**UI:** Graph view first, then Trigger.  
-**CLI:** `airflow dags test dbt_orchestrated_pipeline "$RUN_DATE"`
-
-**Success:** all tasks green; `test_critical` log `PASS=3 WARN=0 ERROR=0`; `test_warn_only` log `PASS=2 WARN=2 ERROR=0`.
+Open **Graph** first, then Trigger.  
+**Success:** all tasks green; `test_critical` → `PASS=3 WARN=0 ERROR=0`; `test_warn_only` → `PASS=2 WARN=2 ERROR=0`.
 
 ---
 
@@ -124,23 +106,9 @@ WARN=2 in a full build does **not** mean Airflow is hiding bad data — those te
 
 ---
 
-## What to click (UI)
-
-1. Open the Airflow URL from class → login.  
-2. Filter tags `airflow` or `dbt` if the list is long.  
-3. Open the DAG → **Graph**.  
-4. **Trigger** (play button).  
-5. Click a task → **Log**.
-
-Older `dbt_core_run_test` / `dbt_core_e2e_pipeline` files were removed from the repo. If they still show in your UI from an earlier copy, delete them from `$AIRFLOW_HOME/dags/` and re-copy using [`airflow-install.md`](airflow-install.md).
-
----
-
 ## FAQ
 
 | Question | Answer |
 |----------|--------|
-| Is `airflow dags test` the same as `dbt test`? | No. It runs the **whole DAG** once from the CLI. |
-| Why a new `$RUN_DATE`? | Airflow treats each timestamp as a run. Reuse can look skipped/confusing. |
 | Where did payment WARN go in critical? | Not selected. See `test_warn_only` on DAG 3. |
-| Docs site? | We only **generate** files under `target/` (no `dbt docs serve` in this path). |
+| Docs output? | `dbt docs generate` writes files under `target/` (including `index.html`). |
