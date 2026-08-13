@@ -237,7 +237,8 @@ Look for:
 - `not_null_if` under `stg_orders.order_delivered_customer_date` → same warn / warn_only
 - On **mart** `fct_orders`, the matching `not_null_if` / some `positive_value` use `severity: error` + `tags: ["critical"]`
 
-That is why staging can WARN while `tag:critical` stays clean.
+Severity controls warn vs fail. Tags only choose **which** tests to run (`--select tag:...`).  
+Staging still WARNs because dirty rows are present there. The mart test can still **pass** because those rows are removed in the model SQL (next step) — not because of the tag name.
 
 **Step 3 — Read the generic test code (the rule)**
 
@@ -292,17 +293,19 @@ WHERE order_status = 'delivered'
   AND order_delivered_customer_date IS NULL;
 ```
 
-**Step 6 — Validate why the mart critical test still passes**
+**Step 6 — Validate why the mart test still passes**
 
-Open `models/marts/fct_orders.sql` — it filters out delivered rows with a null delivery date (and only keeps orders that join to items).  
-Then re-check:
+Open `models/marts/fct_orders.sql` — it **filters out** delivered rows with a null delivery date (and only keeps orders that join to items).  
+So the same `not_null_if` rule on `fct_orders` finds **0** bad rows.
 
 ```bash
 dbt show --limit 5 --inline "select order_id, order_status, order_delivered_customer_date from {{ ref('fct_orders') }} where order_status = 'delivered' and order_delivered_customer_date is null"
-dbt test --select tag:critical
+dbt test --select "test_type:generic,test_name:not_null_if"
 ```
 
-**Expect:** no (or empty) bad mart rows for that rule; critical stays `PASS=3 WARN=0 ERROR=0`.
+**Expect:** empty (or no) bad rows on the mart; staging still WARNs; mart `not_null_if` PASSes.
+
+Optional: `dbt test --select tag:critical` should also be green (`PASS=3 WARN=0 ERROR=0`) because those must-pass tests (including mart checks) have clean data.
 
 **Quick checklist**
 
@@ -310,11 +313,12 @@ dbt test --select tag:critical
 |----------|----------------|
 | Did anything block the run? | Summary: `ERROR` must be 0 (unless you are in fail→fix) |
 | Which test / how many rows? | WARN/FAIL line in the log |
-| Warn or hard fail by design? | `schema.yml` → `severity` + `tags` |
+| Warn or hard fail by design? | `schema.yml` → `severity` (`warn` / `error`) |
+| Which group of tests to run? | `schema.yml` → `tags` + `--select tag:...` |
 | What is the rule? | `tests/generic/*.sql` |
 | Exact SQL that ran? | `target/compiled/...` |
-| Are the dirty rows real? | `dbt show` or Snowflake |
-| Why is mart still green? | `fct_orders.sql` filter + `tag:critical` |
+| Are the dirty rows real? | `dbt show` or Snowflake on **staging** |
+| Why is the mart test still green? | `fct_orders.sql` removes those dirty rows — the mart test has nothing left to fail |
 
 ### Understanding `--select`, tags, and parameters
 
