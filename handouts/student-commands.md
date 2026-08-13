@@ -466,7 +466,29 @@ export DBT_PROJECT_DIR="$(pwd)/dbt_project"
 export DBT_ENV_FILE="$HOME/.dbt/env.sh"
 ```
 
-The dbt DAGs run `dbt test --select tag:critical` (must-pass only). They do **not** run `tag:warn_only`, so Airflow stays green even when a full `dbt build` shows WARN=2.
+### What the dbt DAGs run (and what they skip)
+
+Open `airflow/dags/dbt_core_run_test.py` (and `dbt_core_e2e_pipeline.py`). The test task is roughly:
+
+```text
+dbt run --target dev
+dbt test --target dev --select tag:critical
+```
+
+| Command / selection | What it includes | Typical result in this project |
+|---------------------|------------------|--------------------------------|
+| Full `dbt build --target dev` | All models + **all** tests (including `warn_only`) | `PASS=35 WARN=2 ERROR=0` — the 2 WARNs are dirty staging rows |
+| Airflow `dbt_test` | Only tests tagged **`critical`** | `PASS=3 WARN=0 ERROR=0` |
+
+Why Airflow can be green while `dbt build` shows WARN=2:
+
+1. Staging dirty-data checks use tag **`warn_only`** (payment zeros, delivered-null dates).  
+2. Airflow’s `--select tag:critical` **does not run** those tests at all.  
+3. So those WARN lines never appear in the Airflow `dbt_test` log — not because the dirty rows disappeared, but because that group of tests was **not selected**.  
+4. The **`critical`** tests (must-pass / `severity: error`) still run; with our mart filters they stay clean.
+
+In short: Airflow is a **stricter gate on must-pass tests only**, not a full rebuild+all-tests like `dbt build`. You already saw the WARN group in Module 1 with `dbt test --select tag:warn_only`.
+
 
 ### CLI DAG tests
 
