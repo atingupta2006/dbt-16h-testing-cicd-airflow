@@ -9,7 +9,10 @@ Use connection values shared in class. Prefer Linux (Ubuntu) for Airflow section
 Model layers in `dbt_project/models/`: **staging** → **intermediate** → **marts**.
 
 Dataset and flow: [`olist-data-and-flow.md`](olist-data-and-flow.md)  
+CI/CD and deploy: [`cicd-and-deployment.md`](cicd-and-deployment.md)  
 Airflow install (once): [`airflow-install.md`](airflow-install.md)  
+Airflow DAGs: [`airflow-dags.md`](airflow-dags.md)  
+End-to-end walkthrough: [`e2e-production-walkthrough.md`](e2e-production-walkthrough.md)  
 Incremental models: [`incremental-quick-look.md`](incremental-quick-look.md)
 
 **How to read dbt summaries:** look at the last line, e.g. `Done. PASS=35 WARN=2 ERROR=0`.  
@@ -396,67 +399,36 @@ Done. PASS=3 WARN=0 ERROR=0 SKIP=0 TOTAL=3
 
 ## 2. CI/CD (GitHub Actions)
 
-### Files
-
-- `.github/workflows/dbt-ci.yml`
-- `.github/workflows/dbt-deploy.yml`
-- `dbt_project/profiles.yml.example`
-
-### Git steps (from repo root)
+**Full guide:** [`cicd-and-deployment.md`](cicd-and-deployment.md)  
+(two CI jobs: Build dev → Gate critical; one Deploy Prod job; three strategies; Snowflake proof).
 
 ```bash
 cd ..   # if you are still inside dbt_project
 git checkout -b practice/ci-check
-# optional: make a small change
 git add -A
 git commit -m "practice: ci check"
 git push -u origin HEAD
 ```
 
-1. Open a Pull Request → wait for **dbt CI** (`dbt build --target dev`).  
-2. Fix until CI is green. The job can still show the same staging **WARN=2** as a local build — that is OK when the check is green (`ERROR=0`).  
-3. Merge to `main` → **dbt Deploy Prod** runs `dbt build --target prod` (writes `ANALYTICS`, not `ANALYTICS_DEV`).
-
-### Snowflake checks (after CI / deploy)
-
-dbt does **not** move one table between environments. It builds **two copies** of the same model name in **two schemas**:
-
-| Target | Schema | When it gets updated |
-|--------|--------|----------------------|
-| `dev` | `ANALYTICS_DEV` | Local `dbt build --target dev` or **dbt CI** on a PR |
-| `prod` | `ANALYTICS` | **dbt Deploy Prod** after merge to `main` (`dbt build --target prod`) |
+PR → **dbt CI** (both jobs green; WARN on build OK). Merge `main` → **dbt Deploy Prod**.
 
 ```sql
--- Dev copy (exists after any successful dev build / CI)
-SELECT COUNT(*) FROM OLIST_DB.ANALYTICS_DEV.FCT_ORDERS;
-
--- Prod copy (exists only after a successful prod deploy)
-SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;
+SELECT COUNT(*) FROM OLIST_DB.ANALYTICS_DEV.FCT_ORDERS;  -- dev
+SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;      -- prod (after deploy)
 ```
-
-What to expect:
-
-- First query: a number (row count of the fact in **dev**).  
-- Second query: same idea for **prod**. If prod was never deployed, this errors (`object does not exist`) — that is normal until Deploy Prod has run once.  
-- After a good deploy, both usually show similar counts (same logic, two schemas).
 
 ---
 
 ## 3. Airflow + dbt Core
 
-**Install Airflow first (separate document):** [`airflow-install.md`](airflow-install.md)  
-(venv, `pip` + constraints, `AIRFLOW_HOME`, copy DAGs, `DBT_*`, start UI).
+**Install:** [`airflow-install.md`](airflow-install.md)  
+**DAGs (use these three):** [`airflow-dags.md`](airflow-dags.md)
 
-### Files
-
-- `airflow/dags/demo_schedule_retries.py`
-- `airflow/dags/dbt_core_run_test.py`
-- `airflow/dags/dbt_core_e2e_pipeline.py`
-- `airflow/dags/dbt_paths.py`
-
-### Before DAG demos
-
-From **repo root** (after install):
+| Order | DAG id | Point of the demo |
+|------:|--------|-------------------|
+| 1 | `demo_schedule_retries` | Schedule + retries (no dbt) |
+| 2 | `dbt_core_commands` | `run` → `tag:critical` → `build` → `docs generate` |
+| 3 | `dbt_orchestrated_pipeline` | Layered run + critical gate + warn_only + publish |
 
 ```bash
 export AIRFLOW_HOME=~/training/airflow_home
@@ -464,104 +436,29 @@ source ~/training/venvs/airflow/bin/activate
 export DBT_BIN="$(pwd)/dbt_project/.venv/bin/dbt"
 export DBT_PROJECT_DIR="$(pwd)/dbt_project"
 export DBT_ENV_FILE="$HOME/.dbt/env.sh"
-```
 
-### What the dbt DAGs run (and what they skip)
-
-Open `airflow/dags/dbt_core_run_test.py` (and `dbt_core_e2e_pipeline.py`). The test task is roughly:
-
-```text
-dbt run --target dev
-dbt test --target dev --select tag:critical
-```
-
-| Command / selection | What it includes | Typical result in this project |
-|---------------------|------------------|--------------------------------|
-| Full `dbt build --target dev` | All models + **all** tests (including `warn_only`) | `PASS=35 WARN=2 ERROR=0` — the 2 WARNs are dirty staging rows |
-| Airflow `dbt_test` | Only tests tagged **`critical`** | `PASS=3 WARN=0 ERROR=0` |
-
-Why Airflow can be green while `dbt build` shows WARN=2:
-
-1. Staging dirty-data checks use tag **`warn_only`** (payment zeros, delivered-null dates).  
-2. Airflow’s `--select tag:critical` **does not run** those tests at all.  
-3. So those WARN lines never appear in the Airflow `dbt_test` log — not because the dirty rows disappeared, but because that group of tests was **not selected**.  
-4. The **`critical`** tests (must-pass / `severity: error`) still run; with our mart filters they stay clean.
-
-In short: Airflow is a **stricter gate on must-pass tests only**, not a full rebuild+all-tests like `dbt build`. You already saw the WARN group in Module 1 with `dbt test --select tag:warn_only`.
-
-
-### CLI DAG tests (`airflow dags test`)
-
-This is **Airflow’s** command-line way to run a DAG once. It is **not** `dbt test`.
-
-| | **CLI:** `airflow dags test …` | **UI:** Trigger DAG |
-|--|--------------------------------|---------------------|
-| Where | Terminal | Airflow web UI |
-| What it does | Runs that DAG’s tasks **once** for a given date | Same idea: one manual run |
-| Scheduler needed? | No — useful when UI is down or slow | Needs webserver / standalone running |
-| Good for | Quick check that DAGs + dbt wiring work | Showing the graph and task logs in class |
-
-```bash
-airflow dags test <dag_id> <logical_date>
-```
-
-| Piece | Meaning |
-|-------|---------|
-| `airflow dags test` | “Execute this DAG once from the CLI” |
-| `<dag_id>` | Name of the DAG file’s `dag_id` (e.g. `dbt_core_run_test`) |
-| `<logical_date>` | Timestamp Airflow uses for this run (any valid datetime) |
-
-Use a **new** timestamp each re-run so Airflow treats it as a fresh run:
-
-```bash
-# repo root; Airflow venv + AIRFLOW_HOME + DBT_* already exported
 RUN_DATE="$(date -u +%Y-%m-%dT%H:%M:%S)"
-
 airflow dags test demo_schedule_retries "$RUN_DATE"
-airflow dags test dbt_core_run_test "$RUN_DATE"
-airflow dags test dbt_core_e2e_pipeline "$RUN_DATE"
+airflow dags test dbt_core_commands "$RUN_DATE"
+airflow dags test dbt_orchestrated_pipeline "$RUN_DATE"
 ```
 
-**What “success” looks like:** the command finishes without a Python/task exception; for dbt DAGs you should see `dbt run` then `dbt test --select tag:critical` output in the terminal (same critical-only selection as above).
-
-**What it is not:** it does not replace Module 1’s `dbt test` / `dbt build`. Those are dbt commands. Here Airflow is the orchestrator calling dbt inside its tasks.
-
-### UI (same DAGs, in the browser)
-
-1. Open Airflow UI (URL shared in class).  
-2. Trigger: `demo_schedule_retries`, `dbt_core_run_test`, `dbt_core_e2e_pipeline`.  
-3. Open logs for `dbt_run` and `dbt_test`.
+`airflow dags test` runs a **DAG** once from the CLI — it is **not** `dbt test`. Full explanation: [`airflow-dags.md`](airflow-dags.md).
 
 ---
 
 ## 4. End-to-end
 
+**Full walkthrough:** [`e2e-production-walkthrough.md`](e2e-production-walkthrough.md)
+
 ```bash
 cd dbt_project
 source .venv/bin/activate
 source ~/.dbt/env.sh
-
 dbt build --target dev
 dbt test --select tag:critical
 ```
 
-**Expect:** build `PASS=35 WARN=2 ERROR=0`; critical `PASS=3 WARN=0 ERROR=0`.
+**Expect:** `PASS=35 WARN=2 ERROR=0` then `PASS=3 WARN=0 ERROR=0`.
 
-Then from **repo root** (Airflow venv + `DBT_*` as in §3):
-
-```bash
-export AIRFLOW_HOME=~/training/airflow_home
-source ~/training/venvs/airflow/bin/activate
-export DBT_BIN="$(pwd)/dbt_project/.venv/bin/dbt"
-export DBT_PROJECT_DIR="$(pwd)/dbt_project"
-export DBT_ENV_FILE="$HOME/.dbt/env.sh"
-
-RUN_DATE="$(date -u +%Y-%m-%dT%H:%M:%S)"
-airflow dags test dbt_core_e2e_pipeline "$RUN_DATE"
-```
-
-```sql
--- Same idea as §2: two schemas = two copies of fct_orders
-SELECT COUNT(*) FROM OLIST_DB.ANALYTICS_DEV.FCT_ORDERS;  -- dev
-SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;      -- prod (after Deploy Prod)
-```
+Then CI/deploy ([`cicd-and-deployment.md`](cicd-and-deployment.md)), Snowflake two-schema counts, then Airflow DAG 1 → 2 → 3 ([`airflow-dags.md`](airflow-dags.md)). Star DAG: `dbt_orchestrated_pipeline`.

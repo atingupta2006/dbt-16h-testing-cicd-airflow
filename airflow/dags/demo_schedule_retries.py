@@ -1,4 +1,8 @@
-"""Demo DAG: schedule + retries only (no dbt yet)."""
+"""TOC: Airflow intro + DAGs, scheduling, retries.
+
+Demo: open this DAG in the UI, point at schedule / retries / retry_delay, then Trigger.
+No dbt — one Bash task so beginners see a green run first.
+"""
 
 from datetime import datetime, timedelta
 
@@ -13,7 +17,7 @@ default_args = {
 
 with DAG(
     dag_id="demo_schedule_retries",
-    description="DAG scheduling and retries",
+    description="Intro: schedule + retries (no dbt)",
     start_date=datetime(2024, 1, 1),
     schedule="@daily",
     catchup=False,
@@ -21,6 +25,7 @@ with DAG(
     tags=["demo", "airflow"],
 ) as dag:
 
+    # Single task so the graph stays obvious
     hello = BashOperator(
         task_id="hello",
         bash_command='echo "Airflow demo OK at $(date -u)"',
