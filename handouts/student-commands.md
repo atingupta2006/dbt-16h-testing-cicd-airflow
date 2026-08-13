@@ -10,10 +10,8 @@ Model layers in `dbt_project/models/`: **staging** → **intermediate** → **ma
 
 Dataset and flow: [`olist-data-and-flow.md`](olist-data-and-flow.md) · Handout order: [`README.md`](README.md)  
 CI/CD and deploy: [`cicd-and-deployment.md`](cicd-and-deployment.md)  
-Airflow install (once): [`airflow-install.md`](airflow-install.md)  
 Airflow DAGs: [`airflow-dags.md`](airflow-dags.md)  
-End-to-end walkthrough: [`e2e-production-walkthrough.md`](e2e-production-walkthrough.md)  
-Incremental models: [`incremental-quick-look.md`](incremental-quick-look.md)
+End-to-end walkthrough: [`e2e-production-walkthrough.md`](e2e-production-walkthrough.md)
 
 **How to read dbt summaries:** look at the last line, e.g. `Done. PASS=35 WARN=2 ERROR=0`.  
 **ERROR=0** means nothing blocked the run. **WARN** means “heads-up” (dirty rows), not a hard stop.  

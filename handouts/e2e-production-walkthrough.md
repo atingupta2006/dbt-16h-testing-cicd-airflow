@@ -8,8 +8,7 @@ One chain: dataset → tests you already know → CI/deploy → Snowflake proof 
 |-----|------|
 | [`olist-data-and-flow.md`](olist-data-and-flow.md) | Dataset picture |
 | [`cicd-and-deployment.md`](cicd-and-deployment.md) | PR CI + prod deploy |
-| [`airflow-install.md`](airflow-install.md) | Airflow once |
-| [`airflow-dags.md`](airflow-dags.md) | The three class DAGs |
+| [`airflow-dags.md`](airflow-dags.md) | Airflow DAGs |
 | [`student-commands.md`](student-commands.md) | Command index |
 
 ---
