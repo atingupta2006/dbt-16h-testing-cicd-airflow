@@ -1,16 +1,77 @@
-"""Airflow basics: task order (Olist-style story).
+"""Airflow basics: ordered tasks (validate → quarantine → publish).
 
-Story (simulated — no Snowflake / dbt yet):
-  Before dbt runs, RAW must be validated, bad rows set aside, then marked ready.
-  Order matters: validate → quarantine → publish.
-
-UI: open Graph — arrows show the chain — then Trigger.
+Real work on sample Olist CSVs under AIRFLOW_HOME/sample_data → olist_work/.
 """
 
+from __future__ import annotations
+
+import json
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
+
+from olist_demo_io import REQUIRED_RAW, read_csv, sample_dir, work_dir, write_csv
+
+
+def validate_raw_files() -> str:
+    raw = sample_dir()
+    report = {}
+    for name in REQUIRED_RAW:
+        path = raw / name
+        if not path.is_file():
+            raise FileNotFoundError(f"Required file missing: {path}")
+        rows = read_csv(path)
+        if not rows:
+            raise ValueError(f"No data rows in {path}")
+        report[name] = {"rows": len(rows), "columns": list(rows[0].keys())}
+    out = work_dir() / "validate_report.json"
+    out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    msg = f"Validated {len(report)} files → {out}"
+    print(msg)
+    return msg
+
+
+def quarantine_bad_rows() -> str:
+    """Move zero / blank payment_value rows to a quarantine CSV; keep the rest."""
+    payments = read_csv(sample_dir() / "payments.csv")
+    good: list[dict[str, str]] = []
+    bad: list[dict[str, str]] = []
+    for row in payments:
+        raw_val = (row.get("payment_value") or "").strip()
+        try:
+            value = float(raw_val) if raw_val else 0.0
+        except ValueError:
+            value = 0.0
+            bad.append(row)
+            continue
+        if value <= 0:
+            bad.append(row)
+        else:
+            good.append(row)
+
+    fields = list(payments[0].keys())
+    q_path = work_dir() / "quarantine_zero_payments.csv"
+    clean_path = work_dir() / "payments_clean.csv"
+    write_csv(q_path, bad, fields)
+    write_csv(clean_path, good, fields)
+    msg = f"Quarantined {len(bad)} row(s) → {q_path}; clean {len(good)} → {clean_path}"
+    print(msg)
+    return msg
+
+
+def publish_raw_ready() -> str:
+    marker = work_dir() / "RAW_READY"
+    marker.write_text(
+        f"ready_at_utc={datetime.utcnow().isoformat()}Z\n"
+        f"validate_report={work_dir() / 'validate_report.json'}\n"
+        f"payments_clean={work_dir() / 'payments_clean.csv'}\n",
+        encoding="utf-8",
+    )
+    msg = f"Published marker {marker}"
+    print(msg)
+    return msg
+
 
 default_args = {
     "owner": "data-team",
@@ -28,31 +89,17 @@ with DAG(
     tags=["demo", "airflow", "olist"],
 ) as dag:
 
-    validate_raw_files = BashOperator(
+    validate = PythonOperator(
         task_id="validate_raw_files",
-        bash_command=(
-            'sleep 1; '
-            'echo "[$(date -u +%H:%M:%S)] VALIDATE: required Olist CSVs present '
-            '(orders, order_items, payments, customers, …)"'
-        ),
+        python_callable=validate_raw_files,
     )
-
-    quarantine_bad_rows = BashOperator(
+    quarantine = PythonOperator(
         task_id="quarantine_bad_rows",
-        bash_command=(
-            'sleep 1; '
-            'echo "[$(date -u +%H:%M:%S)] QUARANTINE: flag known dirty RAW rows '
-            '(e.g. zero payment_value) for later warn_only tests"'
-        ),
+        python_callable=quarantine_bad_rows,
     )
-
-    publish_raw_ready = BashOperator(
+    publish = PythonOperator(
         task_id="publish_raw_ready",
-        bash_command=(
-            'echo "[$(date -u +%H:%M:%S)] PUBLISH: RAW ready for staging/dbt '
-            '(next: parallel ingest demo or dbt DAGs)"'
-        ),
+        python_callable=publish_raw_ready,
     )
 
-    # Arrow in the Graph = this order
-    validate_raw_files >> quarantine_bad_rows >> publish_raw_ready
+    validate >> quarantine >> publish

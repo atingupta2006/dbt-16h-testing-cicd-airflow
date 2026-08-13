@@ -47,9 +47,9 @@ If you see **no** `example_*` DAGs, examples were turned off in config — use t
 
 **File:** `airflow/dags/demo_schedule_retries.py`
 
-**Story (simulated):** a **daily** job that checks Olist **RAW** landings are fresh. If the check fails, Airflow **retries**.
+**Story:** a **daily** job that checks Olist **sample** RAW CSVs exist, are non-empty, and have required headers. If the check fails, Airflow **retries**.
 
-**Graph:** one task — `check_raw_olist_freshness`.
+**Graph:** one task — `check_raw_olist_freshness` (`PythonOperator`).
 
 | Setting in code | Meaning |
 |-----------------|---------|
@@ -57,10 +57,12 @@ If you see **no** `example_*` DAGs, examples were turned off in config — use t
 | `retries=2` | On failure, try again up to 2 more times |
 | `retry_delay` (1 minute) | Wait between retries |
 
+Install must copy `airflow/sample_data/*.csv` into `$AIRFLOW_HOME/sample_data` (see install handout).
+
 In class, **Trigger** it so you see a run now (do not wait for the daily schedule).
 
-**Do:** UI → `demo_schedule_retries` → Graph → Trigger → task `check_raw_olist_freshness` → Log.  
-**Success:** green task; log like `DAILY CHECK: RAW Olist landings` and `OK — freshness within SLA`.
+**Do:** UI → `demo_schedule_retries` → Graph → Trigger → task Log.  
+**Success:** green; log shows `OK orders.csv` / `OK payments.csv` / `OK customers.csv` with row counts.
 
 ---
 
@@ -70,7 +72,7 @@ In class, **Trigger** it so you see a run now (do not wait for the daily schedul
 
 **File:** `airflow/dags/demo_task_order.py`
 
-**Story (simulated):** before dbt, RAW must be validated, dirty rows noted, then marked ready — **in that order**.
+**Story:** validate sample RAW → quarantine zero `payment_value` rows to a CSV → write a `RAW_READY` marker under `$AIRFLOW_HOME/olist_work/`.
 
 **Graph:**
 
@@ -78,16 +80,14 @@ In class, **Trigger** it so you see a run now (do not wait for the daily schedul
 validate_raw_files → quarantine_bad_rows → publish_raw_ready
 ```
 
-In code: `validate_raw_files >> quarantine_bad_rows >> publish_raw_ready`.
+| Task | What it really does |
+|------|---------------------|
+| `validate_raw_files` | Reads CSVs; writes `olist_work/validate_report.json` |
+| `quarantine_bad_rows` | Writes `quarantine_zero_payments.csv` + `payments_clean.csv` |
+| `publish_raw_ready` | Writes marker file `olist_work/RAW_READY` |
 
-| Task | Log idea |
-|------|----------|
-| `validate_raw_files` | required Olist CSVs present |
-| `quarantine_bad_rows` | flag known dirty RAW rows |
-| `publish_raw_ready` | RAW ready for staging/dbt |
-
-**Do:** UI → `demo_task_order` → Graph (see the chain) → Trigger → open each task Log in order.  
-**Success:** all three green; VALIDATE, then QUARANTINE, then PUBLISH.
+**Do:** UI → `demo_task_order` → Graph → Trigger → open each Log.  
+**Success:** all green; work files appear under `$AIRFLOW_HOME/olist_work/`.
 
 ---
 
@@ -97,7 +97,7 @@ In code: `validate_raw_files >> quarantine_bad_rows >> publish_raw_ready`.
 
 **File:** `airflow/dags/demo_parallel_join.py`
 
-**Story (simulated — still no Snowflake / dbt):** land two Olist CSVs in parallel, join them, then mark “ready for dbt.”
+**Story:** copy `orders.csv` and `payments.csv` into landing **in parallel**, join on `order_id`, write staging CSV, then a ready marker.
 
 **Graph:**
 
@@ -107,17 +107,14 @@ ingest_orders ──┐
 ingest_payments ┘
 ```
 
-In code: `[ingest_orders, ingest_payments] >> join_orders_payments >> mark_ready_for_dbt`.
+| Task | What it really does |
+|------|---------------------|
+| `ingest_orders` / `ingest_payments` | Copy sample CSV → `olist_work/landing/` |
+| `join_orders_payments` | Build `olist_work/stg_orders_payments.csv` |
+| `mark_ready_for_dbt` | Write `olist_work/READY_FOR_DBT` |
 
-| Task | What the log should look like |
-|------|-------------------------------|
-| `ingest_orders` | INGEST orders.csv … |
-| `ingest_payments` | INGEST payments.csv … (can finish beside orders) |
-| `join_orders_payments` | JOIN orders+payments → …stg_orders_payments.csv |
-| `mark_ready_for_dbt` | READY … next step is dbt (DAG 4+) |
-
-**Do:** UI → `demo_parallel_join` → Graph (two ingest branches into join) → Trigger.  
-**Success:** both ingest tasks green, then join, then `mark_ready_for_dbt` green.
+**Do:** UI → `demo_parallel_join` → Graph → Trigger.  
+**Success:** both ingest green, then join, then ready; open Log for row counts / output paths.
 
 ---
 

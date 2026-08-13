@@ -37,6 +37,8 @@ source ~/training/venvs/airflow/bin/activate
 
 REPO_DIR="$(pwd)"
 cp "$REPO_DIR"/airflow/dags/*.py "$AIRFLOW_HOME/dags/"
+mkdir -p "$AIRFLOW_HOME/sample_data"
+cp "$REPO_DIR"/airflow/sample_data/*.csv "$AIRFLOW_HOME/sample_data/"
 
 export DBT_BIN="$REPO_DIR/dbt_project/.venv/bin/dbt"
 export DBT_PROJECT_DIR="$REPO_DIR/dbt_project"

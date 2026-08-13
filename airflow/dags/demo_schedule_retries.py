@@ -1,17 +1,47 @@
-"""Airflow basics: schedule + retries (Olist-style story).
+"""Airflow basics: schedule + retries (Olist RAW freshness).
 
-Story (simulated — no Snowflake / dbt yet):
-  Every day, check that RAW Olist landings arrived.
-  If the check fails, Airflow retries (retries=2, 1 minute apart).
+Real check: required sample CSVs exist, are non-empty, and have expected headers.
+If the check fails, Airflow retries (retries=2).
 
-Demo: open Graph, point at schedule / retries / retry_delay, then Trigger
-(do not wait for the daily schedule).
+Demo: Trigger now — do not wait for @daily.
 """
+
+from __future__ import annotations
 
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.operators.bash import BashOperator
+from airflow.operators.python import PythonOperator
+
+from olist_demo_io import REQUIRED_RAW, sample_dir
+
+EXPECTED_HEADERS = {
+    "orders.csv": {"order_id", "customer_id", "order_status"},
+    "payments.csv": {"order_id", "payment_value"},
+    "customers.csv": {"customer_id"},
+}
+
+
+def check_raw_olist_freshness() -> str:
+    raw = sample_dir()
+    lines = [f"RAW root: {raw}"]
+    for name in REQUIRED_RAW:
+        path = raw / name
+        if not path.is_file():
+            raise FileNotFoundError(f"Missing RAW landing: {path}")
+        if path.stat().st_size == 0:
+            raise ValueError(f"Empty RAW landing: {path}")
+        header = path.read_text(encoding="utf-8").splitlines()[0].split(",")
+        missing_cols = EXPECTED_HEADERS[name] - set(header)
+        if missing_cols:
+            raise ValueError(f"{name} missing columns: {sorted(missing_cols)}")
+        # subtract header
+        row_count = max(0, sum(1 for _ in path.open(encoding="utf-8")) - 1)
+        lines.append(f"OK {name}: {row_count} data rows")
+    summary = " | ".join(lines)
+    print(summary)
+    return summary
+
 
 default_args = {
     "owner": "data-team",
@@ -29,13 +59,7 @@ with DAG(
     tags=["demo", "airflow", "olist"],
 ) as dag:
 
-    # One task keeps the Graph obvious while teaching schedule/retries
-    check_raw_olist_freshness = BashOperator(
+    PythonOperator(
         task_id="check_raw_olist_freshness",
-        bash_command=(
-            'echo "[$(date -u +%H:%M:%S)] DAILY CHECK: RAW Olist landings '
-            '(orders, order_items, payments, customers, …)"; '
-            'echo "[$(date -u +%H:%M:%S)] OK — freshness within SLA '
-            '(simulated). On real fail, Airflow would retry 2x."'
-        ),
+        python_callable=check_raw_olist_freshness,
     )
