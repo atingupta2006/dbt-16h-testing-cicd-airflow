@@ -1,4 +1,4 @@
-"""01_check_raw_freshness - schedule + retries (Olist RAW check).
+"""dag_01_check_raw_freshness - schedule + retries (Olist RAW check).
 
 Purpose
   Run this DAG first in class.
@@ -63,7 +63,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="01_check_raw_freshness",
+    dag_id="dag_01_check_raw_freshness",
     description="Olist: daily RAW freshness check (schedule + retries)",
     start_date=datetime(2024, 1, 1),  # Airflow needs a start; catchup is off
     schedule="@daily",  # would run once per day if left unattended

@@ -1,4 +1,4 @@
-"""05_dbt_layered_orchestration - layered dbt end-to-end shape.
+"""dag_05_dbt_layered_orchestration - layered dbt end-to-end shape.
 
 Purpose
   Run last - full layered orchestration.
@@ -33,7 +33,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="05_dbt_layered_orchestration",
+    dag_id="dag_05_dbt_layered_orchestration",
     description="Layered dbt run, critical gate, warn_only, docs, publish",
     start_date=datetime(2024, 1, 1),
     schedule=None,

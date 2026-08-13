@@ -42,7 +42,8 @@ cp "$REPO_DIR"/airflow/sample_data/*.csv "$AIRFLOW_HOME/sample_data/"
 # Drop older class DAG filenames if they still exist from a previous copy
 rm -f "$AIRFLOW_HOME"/dags/demo_*.py \
       "$AIRFLOW_HOME"/dags/dbt_core_commands.py \
-      "$AIRFLOW_HOME"/dags/dbt_orchestrated_pipeline.py
+      "$AIRFLOW_HOME"/dags/dbt_orchestrated_pipeline.py \
+      "$AIRFLOW_HOME"/dags/0*_*.py
 
 export DBT_BIN="$REPO_DIR/dbt_project/.venv/bin/dbt"
 export DBT_PROJECT_DIR="$REPO_DIR/dbt_project"

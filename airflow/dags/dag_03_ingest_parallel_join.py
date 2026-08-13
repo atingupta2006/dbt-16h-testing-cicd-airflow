@@ -1,7 +1,7 @@
-"""03_ingest_parallel_join - parallel ingest, then join.
+"""dag_03_ingest_parallel_join - parallel ingest, then join.
 
 Purpose
-  Run after 02_prepare_raw_ordered.
+  Run after dag_02_prepare_raw_ordered.
   Show two tasks that can run at the same time, then one task that waits for both.
 
 Flow
@@ -89,7 +89,7 @@ def mark_ready_for_dbt() -> str:
     marker.write_text(
         f"ready_at_utc={datetime.utcnow().isoformat()}Z\n"
         f"staging_file={stg}\n"
-        f"next=04_dbt_commands_sequence / 05_dbt_layered_orchestration\n",
+        f"next=dag_04_dbt_commands_sequence / dag_05_dbt_layered_orchestration\n",
         encoding="utf-8",
     )
     msg = f"Ready marker written -> {marker}"
@@ -104,7 +104,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="03_ingest_parallel_join",
+    dag_id="dag_03_ingest_parallel_join",
     description="Olist: parallel CSV ingest -> join -> ready for dbt",
     start_date=datetime(2024, 1, 1),
     schedule=None,

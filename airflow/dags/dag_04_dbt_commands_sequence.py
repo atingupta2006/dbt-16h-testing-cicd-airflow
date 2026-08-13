@@ -1,4 +1,4 @@
-"""04_dbt_commands_sequence - run dbt commands from Airflow (in order).
+"""dag_04_dbt_commands_sequence - run dbt commands from Airflow (in order).
 
 Purpose
   Run after the basics DAGs (01-03).
@@ -25,7 +25,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="04_dbt_commands_sequence",
+    dag_id="dag_04_dbt_commands_sequence",
     description="dbt run -> critical test -> build -> docs generate",
     start_date=datetime(2024, 1, 1),
     schedule=None,  # Trigger from the UI in class

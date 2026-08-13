@@ -40,7 +40,7 @@ Airflow: schedule / task order / parallel → dbt commands → layered orchestra
 | CI | Green **Build (dev)** on a PR |
 | Deploy | Green **Deploy (prod)** after merge |
 | Snowflake | Counts exist in both `ANALYTICS_DEV` and `ANALYTICS` |
-| Airflow | Basics DAGs green; `05_dbt_layered_orchestration` all green |
+| Airflow | Basics DAGs green; `dag_05_dbt_layered_orchestration` all green |
 
 ---
 
@@ -178,11 +178,11 @@ SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;
 | Step | DAG | What you learn |
 |------|-----|----------------|
 | 0 | `example_*` (if listed) | Airflow’s own sample DAGs (not in this repo) |
-| 01 | `01_check_raw_freshness` | Daily RAW freshness check + retries |
-| 02 | `02_prepare_raw_ordered` | Validate → quarantine → publish RAW (ordered) |
-| 03 | `03_ingest_parallel_join` | Parallel Olist CSV ingest → join → ready for dbt |
+| 01 | `dag_01_check_raw_freshness` | Daily RAW freshness check + retries |
+| 02 | `dag_02_prepare_raw_ordered` | Validate → quarantine → publish RAW (ordered) |
+| 03 | `dag_03_ingest_parallel_join` | Parallel Olist CSV ingest → join → ready for dbt |
 
-| 04 | `04_dbt_commands_sequence` | Airflow runs dbt CLI: run → **critical** → build → docs |
+| 04 | `dag_04_dbt_commands_sequence` | Airflow runs dbt CLI: run → **critical** → build → docs |
 
 On **04**, open the **`dbt_test_critical`** log and confirm something like:
 
@@ -198,7 +198,7 @@ Done. PASS=3 WARN=0 ERROR=0
 
 **Goal:** One end-to-end DAG: layered run → hard gate → heads-up + docs → publish stub.
 
-**DAG:** `05_dbt_layered_orchestration`  
+**DAG:** `dag_05_dbt_layered_orchestration`  
 **Detail:** [`airflow-dags.md`](airflow-dags.md) (DAG 5)
 
 ### Graph (read this before Trigger)
@@ -220,7 +220,7 @@ raw_data_ready → run_staging → run_intermediate → run_marts → test_criti
 
 ### Do
 
-1. UI → `05_dbt_layered_orchestration` → **Graph** (point at the arrows).  
+1. UI → `dag_05_dbt_layered_orchestration` → **Graph** (point at the arrows).  
 2. **Trigger**.  
 3. Open **`test_critical`** log → expect `PASS=3 WARN=0 ERROR=0`.  
 4. Open **`test_warn_only`** log → expect WARN allowed (`PASS=2 WARN=2` typical).  
@@ -244,7 +244,7 @@ Use the same idea as Module 1 (temporarily break a **critical** test — severit
 
 1. Break a critical test (or force bad mart data so a critical test fails).  
 2. Re-run `dbt test --select tag:critical` → expect `ERROR > 0`.  
-3. Or Trigger `05_dbt_layered_orchestration` → **`test_critical`** red → pipeline stops before a clean publish story.  
+3. Or Trigger `dag_05_dbt_layered_orchestration` → **`test_critical`** red → pipeline stops before a clean publish story.  
 4. Restore the change.  
 5. Re-run → critical green again.
 

@@ -1,7 +1,7 @@
-"""02_prepare_raw_ordered - task order (validate -> quarantine -> publish).
+"""dag_02_prepare_raw_ordered - task order (validate -> quarantine -> publish).
 
 Purpose
-  Run after 01_check_raw_freshness.
+  Run after dag_01_check_raw_freshness.
   Show that arrows (>>) mean “must finish before the next step.”
 
 Flow
@@ -94,7 +94,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="02_prepare_raw_ordered",
+    dag_id="dag_02_prepare_raw_ordered",
     description="Olist: validate RAW -> quarantine -> publish ready (ordered)",
     start_date=datetime(2024, 1, 1),
     schedule=None,  # run only when Triggered (no cron)
