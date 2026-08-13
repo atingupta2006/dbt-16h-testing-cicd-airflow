@@ -59,6 +59,18 @@ Open **Actions** (or the Checks tab on the PR). You should see **two boxes** on 
 
 The gate job also uploads `run_results.json` / `manifest.json` as an artifact (optional to open).
 
+**Does `dbt build` already run critical tests?** Yes. `dbt build` runs models **and** their tests (including `tag:critical`). If a critical test fails, **Build (dev)** is already red.
+
+**Why a separate Gate job then?**
+
+| Reason | Plain meaning |
+|--------|----------------|
+| Clear Actions story | Box 1 = build (WARN OK). Box 2 = must-pass only (no WARN noise). |
+| Same idea as Airflow | Orchestrator often runs `dbt test --select tag:critical` as its own step — not a full rebuild. |
+| Explicit release check | Production pipelines often keep a dedicated quality gate even when build already tested. |
+
+So Gate is **not** “critical was skipped in build.” It is a **focused re-check** of must-pass tests (and a teaching parallel to Airflow).
+
 ### dbt Deploy Prod (on push to `main`)
 
 | Step | Command | Writes to |
@@ -148,7 +160,7 @@ If prod was never deployed, the second query errors (`object does not exist`) �
 | Question | Answer |
 |----------|--------|
 | Why is CI green with WARN? | warn_only tests are heads-up. `dbt build` exits 0 when ERROR=0. |
-| Why a second CI job? | Same idea as production: **build** then a **must-pass gate**. The gate fails the Actions check; whether merge is blocked depends on branch protection. |
+| Why a second CI job? | Build already runs all tests (critical included). Gate is a **focused re-check** of `tag:critical` only — clearer Actions story and same pattern as Airflow. The gate fails the Actions check; whether merge is blocked depends on branch protection. |
 | Did my table “move” to prod? | No. Prod is a second build into `ANALYTICS`. |
 | Gate vs Airflow? | Same selection: `tag:critical`. warn_only is not in the gate. |
 
