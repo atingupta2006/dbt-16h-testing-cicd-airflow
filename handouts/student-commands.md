@@ -417,14 +417,28 @@ git push -u origin HEAD
 2. Fix until CI is green. The job can still show the same staging **WARN=2** as a local build — that is OK when the check is green (`ERROR=0`).  
 3. Merge to `main` → **dbt Deploy Prod** runs `dbt build --target prod` (writes `ANALYTICS`, not `ANALYTICS_DEV`).
 
-### Snowflake checks
+### Snowflake checks (after CI / deploy)
+
+dbt does **not** move one table between environments. It builds **two copies** of the same model name in **two schemas**:
+
+| Target | Schema | When it gets updated |
+|--------|--------|----------------------|
+| `dev` | `ANALYTICS_DEV` | Local `dbt build --target dev` or **dbt CI** on a PR |
+| `prod` | `ANALYTICS` | **dbt Deploy Prod** after merge to `main` (`dbt build --target prod`) |
 
 ```sql
+-- Dev copy (exists after any successful dev build / CI)
 SELECT COUNT(*) FROM OLIST_DB.ANALYTICS_DEV.FCT_ORDERS;
+
+-- Prod copy (exists only after a successful prod deploy)
 SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;
 ```
 
-(Second query needs a successful prod deploy.)
+What to expect:
+
+- First query: a number (row count of the fact in **dev**).  
+- Second query: same idea for **prod**. If prod was never deployed, this errors (`object does not exist`) — that is normal until Deploy Prod has run once.  
+- After a good deploy, both usually show similar counts (same logic, two schemas).
 
 ---
 
@@ -501,6 +515,7 @@ airflow dags test dbt_core_e2e_pipeline "$RUN_DATE"
 ```
 
 ```sql
-SELECT COUNT(*) FROM OLIST_DB.ANALYTICS_DEV.FCT_ORDERS;
-SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;
+-- Same idea as §2: two schemas = two copies of fct_orders
+SELECT COUNT(*) FROM OLIST_DB.ANALYTICS_DEV.FCT_ORDERS;  -- dev
+SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;      -- prod (after Deploy Prod)
 ```
