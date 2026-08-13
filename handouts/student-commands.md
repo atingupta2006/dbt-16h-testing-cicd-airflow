@@ -133,7 +133,7 @@ WARN 9 positive_value_stg_payments_payment_value
 ```
 
 That means: test name `positive_value` on model `stg_payments` column `payment_value`, and **9** rows broke the rule.  
-Use **§1e** next time you want the full inspect path (YAML → SQL → compiled → data). Quick data check:
+Quick data check with **`dbt show`** (preview query results in the terminal — details in **§1e** Step 5):
 
 ```bash
 dbt show --limit 10 --inline "select order_id, payment_value from {{ ref('stg_payments') }} where payment_value <= 0"
@@ -268,6 +268,14 @@ That SQL is what Snowflake ran; the row count in the WARN line is how many rows 
 
 **Step 5 — Inspect the data (prove the rows exist)**
 
+Use **`dbt show`** to run a small SQL preview **through dbt** (same profile / `ref()` as your models) and print a table in the terminal. It does **not** create a new model.
+
+| Piece | Meaning |
+|-------|---------|
+| `dbt show` | Preview query results from the warehouse |
+| `--inline "..."` | SQL string to run (can use `{{ ref('...') }}`) |
+| `--limit N` | Cap how many rows are printed (**put limit here**, not as `LIMIT` inside the SQL — Snowflake errors if both wrap) |
+
 Payments (zeros):
 
 ```bash
@@ -280,7 +288,9 @@ Delivered with null delivery date:
 dbt show --limit 10 --inline "select order_id, order_status, order_delivered_customer_date from {{ ref('stg_orders') }} where order_status = 'delivered' and order_delivered_customer_date is null"
 ```
 
-Optional same checks in Snowflake worksheet (dev schema):
+You should see real rows (e.g. `PAYMENT_VALUE = 0`). That proves the WARN is about **data**, not a broken test definition.
+
+Optional same checks in Snowflake worksheet (dev schema) — same idea, without dbt:
 
 ```sql
 SELECT order_id, payment_value
@@ -317,7 +327,7 @@ Optional: `dbt test --select tag:critical` should also be green (`PASS=3 WARN=0 
 | Which group of tests to run? | `schema.yml` → `tags` + `--select tag:...` |
 | What is the rule? | `tests/generic/*.sql` |
 | Exact SQL that ran? | `target/compiled/...` |
-| Are the dirty rows real? | `dbt show` or Snowflake on **staging** |
+| Are the dirty rows real? | `dbt show` (preview via dbt + `ref()`) or the same SQL in Snowflake |
 | Why is the mart test still green? | `fct_orders.sql` removes those dirty rows — the mart test has nothing left to fail |
 
 ### Understanding `--select`, tags, and parameters
