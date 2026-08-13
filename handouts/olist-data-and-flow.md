@@ -172,7 +172,7 @@ dbt build --target prod         # writes into ANALYTICS (separate copy)
       example_* (if present)             → Airflow’s own samples
       demo_schedule_retries              → schedule + retries
       demo_task_order                    → task order
-      demo_parallel_join                 → parallel then join
+      demo_parallel_join                 → parallel Olist ingest → join
       dbt_core_commands                  → run / critical / build / docs
       dbt_orchestrated_pipeline          → layered run + gates + publish
 ```

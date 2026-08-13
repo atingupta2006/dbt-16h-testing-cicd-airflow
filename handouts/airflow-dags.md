@@ -87,18 +87,27 @@ In code this is written as: `start >> process >> finish`.
 
 **File:** `airflow/dags/demo_parallel_join.py`
 
+**Story (simulated — still no Snowflake / dbt):** land two Olist CSVs in parallel, join them, then mark “ready for dbt.”
+
 **Graph:**
 
 ```text
-extract ──┐
-          ├──→ load
-transform ┘
+ingest_orders ──┐
+                ├──→ join_orders_payments → mark_ready_for_dbt
+ingest_payments ┘
 ```
 
-In code: `[extract, transform] >> load`.
+In code: `[ingest_orders, ingest_payments] >> join_orders_payments >> mark_ready_for_dbt`.
 
-**Do:** UI → `demo_parallel_join` → Graph (two branches into `load`) → Trigger.  
-**Success:** `extract` and `transform` green, then `load` green.
+| Task | What the log should look like |
+|------|-------------------------------|
+| `ingest_orders` | INGEST orders.csv … |
+| `ingest_payments` | INGEST payments.csv … (can finish beside orders) |
+| `join_orders_payments` | JOIN orders+payments → …stg_orders_payments.csv |
+| `mark_ready_for_dbt` | READY … next step is dbt (DAG 4+) |
+
+**Do:** UI → `demo_parallel_join` → Graph (two ingest branches into join) → Trigger.  
+**Success:** both ingest tasks green, then join, then `mark_ready_for_dbt` green.
 
 ---
 

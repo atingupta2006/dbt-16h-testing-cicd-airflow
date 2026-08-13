@@ -180,7 +180,8 @@ SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;
 | 0 | `example_*` (if listed) | Airflow’s own sample DAGs (not in this repo) |
 | 1 | `demo_schedule_retries` | Schedule + retries (no dbt) |
 | 2 | `demo_task_order` | Linear order: `start >> process >> finish` |
-| 3 | `demo_parallel_join` | Parallel `extract` / `transform`, then `load` |
+| 3 | `demo_parallel_join` | Parallel Olist CSV ingest → join → ready for dbt |
+
 | 4 | `dbt_core_commands` | Airflow runs dbt CLI: run → **critical** → build → docs |
 
 On **DAG 4**, open the **`dbt_test_critical`** log and confirm something like:
