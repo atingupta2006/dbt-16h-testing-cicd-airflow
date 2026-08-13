@@ -1,12 +1,20 @@
-"""TOC: Dependency orchestration + End-to-End (Olist + dbt Core).
+"""DAG 5 — layered dbt orchestration (end-to-end shape).
 
-Demo: open Graph view, then Trigger.
+Purpose
+  Run dbt by layer, gate on critical tests, then warn_only + docs in parallel,
+  then a publish stub.
+
+Flow
   raw_data_ready → staging → intermediate → marts → test_critical
-       test_critical → test_warn_only → publish_ready
-       test_critical → docs_generate  → publish_ready
+                       test_critical → test_warn_only → publish_ready
+                       test_critical → docs_generate  → publish_ready
 
-Critical is the hard gate. warn_only is a heads-up (does not fail the DAG).
-Requires DBT_BIN, DBT_PROJECT_DIR, DBT_ENV_FILE (see handouts/airflow-install.md).
+Notes
+  critical  = hard gate (must pass)
+  warn_only = heads-up (WARN OK when ERROR=0)
+  EmptyOperator / echo publish = placeholders for “upstream ready” / “BI may refresh”
+
+Needs DBT_BIN, DBT_PROJECT_DIR, DBT_ENV_FILE (see airflow-install.md).
 """
 
 from datetime import datetime, timedelta
@@ -33,31 +41,30 @@ with DAG(
     tags=["demo", "dbt", "orchestration", "e2e"],
 ) as dag:
 
-    # Upstream stub — RAW already loaded in class Snowflake
+    # Placeholder: in class, RAW is already loaded in Snowflake
     raw_data_ready = EmptyOperator(task_id="raw_data_ready")
 
+    # Layered model builds (tag selects that layer only)
     run_staging = BashOperator(
         task_id="run_staging",
         bash_command=dbt_bash("run --target dev --select tag:staging"),
     )
-
     run_intermediate = BashOperator(
         task_id="run_intermediate",
         bash_command=dbt_bash("run --target dev --select tag:intermediate"),
     )
-
     run_marts = BashOperator(
         task_id="run_marts",
         bash_command=dbt_bash("run --target dev --select tag:marts"),
     )
 
-    # Hard gate — must-pass tests
+    # Hard gate — fail here and publish should not look “clean”
     test_critical = BashOperator(
         task_id="test_critical",
         bash_command=dbt_bash("test --target dev --select tag:critical"),
     )
 
-    # Heads-up — dirty staging rows; dbt WARN with ERROR=0
+    # Soft checks — dirty RAW rows may WARN; ERROR should stay 0
     test_warn_only = BashOperator(
         task_id="test_warn_only",
         bash_command=dbt_bash("test --target dev --select tag:warn_only"),
@@ -69,12 +76,14 @@ with DAG(
         + '; echo "Docs catalog: target/index.html (ANALYTICS_DEV models)"',
     )
 
-    # Downstream stub — BI / consumers could refresh after this
+    # Placeholder: “downstream consumers may refresh”
     publish_ready = BashOperator(
         task_id="publish_ready",
         bash_command='echo "Publish ready: OLIST_DB.ANALYTICS_DEV.FCT_ORDERS"',
     )
 
+    # Main spine: layers then gate
     raw_data_ready >> run_staging >> run_intermediate >> run_marts >> test_critical
+    # After the gate, warn_only and docs can run side by side; both feed publish
     test_critical >> test_warn_only >> publish_ready
     test_critical >> docs_generate >> publish_ready

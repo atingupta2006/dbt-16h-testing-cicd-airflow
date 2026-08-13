@@ -1,10 +1,13 @@
-"""TOC: Running DBT from Airflow (run / test / build / docs).
+"""DAG 4 — run dbt commands from Airflow (in order).
 
-Demo: Trigger, then walk the graph left to right.
+Purpose
+  Show Airflow calling the same dbt CLI you use in the terminal.
+
+Flow
   dbt_run → dbt_test_critical → dbt_build → dbt_docs_generate
 
-If short on time, stop after run + test and only mention the last two tasks.
-Requires DBT_BIN, DBT_PROJECT_DIR, DBT_ENV_FILE (see handouts/airflow-install.md).
+Needs DBT_BIN, DBT_PROJECT_DIR, DBT_ENV_FILE in the Airflow process
+(see handouts/airflow-install.md).
 """
 
 from datetime import datetime, timedelta
@@ -24,35 +27,36 @@ with DAG(
     dag_id="dbt_core_commands",
     description="dbt run → critical test → build → docs generate",
     start_date=datetime(2024, 1, 1),
-    schedule=None,
+    schedule=None,  # Trigger from the UI in class
     catchup=False,
     default_args=default_args,
     tags=["demo", "dbt"],
 ) as dag:
 
-    # 1) Build models (dev)
+    # 1) Models only (dev schema)
     dbt_run = BashOperator(
         task_id="dbt_run",
         bash_command=dbt_bash("run --target dev"),
     )
 
-    # 2) Must-pass tests only (not warn_only)
+    # 2) Must-pass tests only (tag:critical → severity error)
     dbt_test_critical = BashOperator(
         task_id="dbt_test_critical",
         bash_command=dbt_bash("test --target dev --select tag:critical"),
     )
 
-    # 3) Full build (models + all tests; WARN on warn_only is OK)
+    # 3) Models + all tests once (WARN on warn_only is OK if ERROR=0)
     dbt_build = BashOperator(
         task_id="dbt_build",
         bash_command=dbt_bash("build --target dev"),
     )
 
-    # 4) Catalog for docs (file under dbt_project/target/; no docs serve in class)
+    # 4) Build the docs catalog files under target/ (no docs serve in class)
     dbt_docs_generate = BashOperator(
         task_id="dbt_docs_generate",
         bash_command=dbt_bash("docs generate")
         + f'; echo "Docs catalog: {dbt_project_dir()}/target/index.html"',
     )
 
+    # Left-to-right order in the Graph
     dbt_run >> dbt_test_critical >> dbt_build >> dbt_docs_generate

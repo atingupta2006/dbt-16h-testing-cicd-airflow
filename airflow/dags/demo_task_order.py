@@ -1,6 +1,14 @@
-"""Airflow basics: ordered tasks (validate → quarantine → publish).
+"""DAG 2 — task order (validate → quarantine → publish).
 
-Real work on sample Olist CSVs under AIRFLOW_HOME/sample_data → olist_work/.
+Purpose
+  Show that arrows (>>) mean “must finish before the next step.”
+
+Flow
+  1) validate_raw_files   — required CSVs exist and have rows
+  2) quarantine_bad_rows  — split zero/blank payments into quarantine vs clean
+  3) publish_raw_ready    — write a RAW_READY marker file
+
+Outputs land under AIRFLOW_HOME/olist_work/.
 """
 
 from __future__ import annotations
@@ -15,6 +23,7 @@ from olist_demo_io import REQUIRED_RAW, read_csv, sample_dir, work_dir, write_cs
 
 
 def validate_raw_files() -> str:
+    """Confirm each required CSV exists and has at least one data row."""
     raw = sample_dir()
     report = {}
     for name in REQUIRED_RAW:
@@ -25,6 +34,7 @@ def validate_raw_files() -> str:
         if not rows:
             raise ValueError(f"No data rows in {path}")
         report[name] = {"rows": len(rows), "columns": list(rows[0].keys())}
+
     out = work_dir() / "validate_report.json"
     out.write_text(json.dumps(report, indent=2), encoding="utf-8")
     msg = f"Validated {len(report)} files → {out}"
@@ -33,16 +43,17 @@ def validate_raw_files() -> str:
 
 
 def quarantine_bad_rows() -> str:
-    """Move zero / blank payment_value rows to a quarantine CSV; keep the rest."""
+    """Put bad payment rows aside; keep good rows for the next step."""
     payments = read_csv(sample_dir() / "payments.csv")
     good: list[dict[str, str]] = []
     bad: list[dict[str, str]] = []
+
     for row in payments:
         raw_val = (row.get("payment_value") or "").strip()
         try:
             value = float(raw_val) if raw_val else 0.0
         except ValueError:
-            value = 0.0
+            # Non-numeric value → treat as bad
             bad.append(row)
             continue
         if value <= 0:
@@ -55,12 +66,14 @@ def quarantine_bad_rows() -> str:
     clean_path = work_dir() / "payments_clean.csv"
     write_csv(q_path, bad, fields)
     write_csv(clean_path, good, fields)
+
     msg = f"Quarantined {len(bad)} row(s) → {q_path}; clean {len(good)} → {clean_path}"
     print(msg)
     return msg
 
 
 def publish_raw_ready() -> str:
+    """Write a small marker file that says RAW prep is done."""
     marker = work_dir() / "RAW_READY"
     marker.write_text(
         f"ready_at_utc={datetime.utcnow().isoformat()}Z\n"
@@ -83,7 +96,7 @@ with DAG(
     dag_id="demo_task_order",
     description="Olist: validate RAW → quarantine → publish ready (ordered)",
     start_date=datetime(2024, 1, 1),
-    schedule=None,
+    schedule=None,  # run only when Triggered (no cron)
     catchup=False,
     default_args=default_args,
     tags=["demo", "airflow", "olist"],
@@ -102,4 +115,5 @@ with DAG(
         python_callable=publish_raw_ready,
     )
 
+    # >> = dependency: left must succeed before right starts
     validate >> quarantine >> publish
