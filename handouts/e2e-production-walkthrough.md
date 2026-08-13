@@ -45,10 +45,11 @@ SELECT COUNT(*) FROM OLIST_DB.ANALYTICS_DEV.FCT_ORDERS;
 SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;
 ```
 
-### E5 — Airflow tour (~35–40 min)
+### E5 — Airflow tour (~40–45 min)
 
-1. `demo_schedule_retries` (schedule + retries)  
-2. `dbt_core_commands` (run → critical test; mention build + docs)
+1. Open an `example_*` DAG if listed (Airflow’s own samples).  
+2. `demo_schedule_retries` → `demo_task_order` → `demo_parallel_join`.  
+3. `dbt_core_commands` (run → critical test).
 
 ### E6 — Orchestration (~35–40 min)
 

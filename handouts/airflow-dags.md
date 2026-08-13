@@ -3,9 +3,9 @@
 Install first: [`airflow-install.md`](airflow-install.md)  
 Commands index: [`student-commands.md`](student-commands.md) §3
 
-Work in this order: **DAG 1 → DAG 2 → DAG 3**.
+Work in this order: **DAG 1 → 2 → 3 → 4 → 5**.
 
-Before you start: copy the DAG `.py` files into `$AIRFLOW_HOME/dags` (see install), restart Airflow if it was already running, and set `DBT_*` in the shell that starts Airflow.
+Before you start: copy the course DAG `.py` files into `$AIRFLOW_HOME/dags` (see install), restart Airflow if it was already running, and set `DBT_*` in the shell that starts Airflow (needed from DAG 4 onward).
 
 ---
 
@@ -16,6 +16,7 @@ Before you start: copy the DAG `.py` files into `$AIRFLOW_HOME/dags` (see instal
 | **DAG** | One pipeline in Airflow (a graph of steps) |
 | **Task** | One step in that graph |
 | **Trigger** | Run the DAG now from the UI (play button) |
+| **Dependency** | An arrow: this task waits for that task |
 
 ## Run any DAG from the UI
 
@@ -26,33 +27,84 @@ Before you start: copy the DAG `.py` files into `$AIRFLOW_HOME/dags` (see instal
 
 ---
 
-## DAG 1 — `demo_schedule_retries`
+## Built-in example DAGs (from Airflow itself)
 
-**Why this DAG:** first look at Airflow only — schedule and retries. It does **not** call dbt.
+After `airflow standalone`, the UI may also list DAGs whose ids start with **`example_`** (for example `example_bash_operator`). Those ship with Airflow — they are **not** files in this course repo.
 
-**File:** `airflow/dags/demo_schedule_retries.py`
+| What to do | Why |
+|------------|-----|
+| Open one `example_*` DAG → **Graph** | See how Airflow authors show operators and arrows |
+| Trigger it once | Confirm a green run without our course code |
+| Then return to the course DAGs below | Course DAGs match this training path |
 
-**Graph:** one task named `hello` (prints a short message).
-
-**What to notice in the code:**
-
-| Setting | In this file | Meaning |
-|---------|--------------|---------|
-| `schedule="@daily"` | on the DAG | Airflow would run it once per day on its own |
-| `retries=2` | in `default_args` | If the task fails, try again up to 2 more times |
-| `retry_delay` | 1 minute | Wait this long between retries |
-
-In class you still **Trigger** it manually so you see a run immediately (you do not wait for the daily schedule).
-
-**What to do:** UI → `demo_schedule_retries` → Graph → Trigger → open task `hello` → Log.
-
-**Success:** task is green; log contains a line like `Airflow demo OK at …`.
+If you see **no** `example_*` DAGs, examples were turned off in config — use the course DAGs only; that is fine.
 
 ---
 
-## DAG 2 — `dbt_core_commands`
+## DAG 1 — `demo_schedule_retries`
 
-**Why this DAG:** Airflow runs dbt commands in order.
+**Why:** first look at Airflow — schedule and retries. Does **not** call dbt.
+
+**File:** `airflow/dags/demo_schedule_retries.py`
+
+**Graph:** one task — `hello` (prints a short message).
+
+| Setting in code | Meaning |
+|-----------------|---------|
+| `schedule="@daily"` | Would run once per day on its own |
+| `retries=2` | On failure, try again up to 2 more times |
+| `retry_delay` (1 minute) | Wait between retries |
+
+In class, **Trigger** it so you see a run now (do not wait for the daily schedule).
+
+**Do:** UI → `demo_schedule_retries` → Graph → Trigger → task `hello` → Log.  
+**Success:** green task; log like `Airflow demo OK at …`.
+
+---
+
+## DAG 2 — `demo_task_order`
+
+**Why:** how **order** works — one task after another.
+
+**File:** `airflow/dags/demo_task_order.py`
+
+**Graph:**
+
+```text
+start → process → finish
+```
+
+In code this is written as: `start >> process >> finish`.
+
+**Do:** UI → `demo_task_order` → Graph (see the chain) → Trigger → open each task Log in order.  
+**Success:** all three green; logs show START, then PROCESS, then FINISH.
+
+---
+
+## DAG 3 — `demo_parallel_join`
+
+**Why:** some tasks can run **at the same time**, then a later task waits for all of them.
+
+**File:** `airflow/dags/demo_parallel_join.py`
+
+**Graph:**
+
+```text
+extract ──┐
+          ├──→ load
+transform ┘
+```
+
+In code: `[extract, transform] >> load`.
+
+**Do:** UI → `demo_parallel_join` → Graph (two branches into `load`) → Trigger.  
+**Success:** `extract` and `transform` green, then `load` green.
+
+---
+
+## DAG 4 — `dbt_core_commands`
+
+**Why:** Airflow runs **dbt** commands in order.
 
 **File:** `airflow/dags/dbt_core_commands.py`
 
@@ -67,15 +119,15 @@ dbt_run → dbt_test_critical → dbt_build → dbt_docs_generate
 | `dbt_run` | `dbt run --target dev` | Models only |
 | `dbt_test_critical` | `dbt test --select tag:critical` | `PASS=3 WARN=0 ERROR=0` |
 | `dbt_build` | `dbt build --target dev` | Full build; `WARN=2` OK if `ERROR=0` |
-| `dbt_docs_generate` | `dbt docs generate` | Files under `dbt_project/target/` (e.g. `index.html`) |
+| `dbt_docs_generate` | `dbt docs generate` | Files under `dbt_project/target/` |
 
-**What to do:** UI → `dbt_core_commands` → Graph → Trigger → open `dbt_test_critical` Log.
+**Do:** UI → `dbt_core_commands` → Graph → Trigger → open `dbt_test_critical` Log.
 
 ---
 
-## DAG 3 — `dbt_orchestrated_pipeline`
+## DAG 5 — `dbt_orchestrated_pipeline`
 
-**Why this DAG:** layered dbt run, then quality checks, then a “publish” stub (dependency orchestration).
+**Why:** layered dbt run, quality checks, then a publish stub (full orchestration).
 
 **File:** `airflow/dags/dbt_orchestrated_pipeline.py`
 
@@ -89,33 +141,12 @@ raw_data_ready → run_staging → run_intermediate → run_marts → test_criti
 
 | Task | Role |
 |------|------|
-| `raw_data_ready` | Marks “RAW is ready” (data already in Snowflake) |
+| `raw_data_ready` | “RAW is ready” (data already in Snowflake) |
 | `run_staging` / `run_intermediate` / `run_marts` | `dbt run` for that layer |
-| `test_critical` | Must-pass tests (`PASS=3 WARN=0 ERROR=0`) |
-| `test_warn_only` | Heads-up tests (`PASS=2 WARN=2 ERROR=0`) |
+| `test_critical` | Must-pass (`PASS=3 WARN=0 ERROR=0`) |
+| `test_warn_only` | Heads-up (`PASS=2 WARN=2 ERROR=0`) — includes the dirty-row checks |
 | `docs_generate` | `dbt docs generate` |
-| `publish_ready` | Marks “downstream may refresh” |
+| `publish_ready` | “Downstream may refresh” |
 
-**What to do:** UI → `dbt_orchestrated_pipeline` → **Graph** (see the arrows) → Trigger → check `test_critical` and `test_warn_only` logs.
-
+**Do:** UI → `dbt_orchestrated_pipeline` → Graph → Trigger → check `test_critical` and `test_warn_only` logs.  
 **Success:** all tasks green.
-
----
-
-## Local / CI build vs Airflow critical task
-
-| | `dbt build` (local or CI) | Airflow `test_critical` / `dbt_test_critical` |
-|--|---------------------------|-----------------------------------------------|
-| Which tests? | All (including `warn_only`) | Only `tag:critical` |
-| Typical line | `PASS=35 WARN=2 ERROR=0` | `PASS=3 WARN=0 ERROR=0` |
-
-The payment WARN still exists in the data; the critical task simply does not select those tests. DAG 3’s `test_warn_only` shows them.
-
----
-
-## FAQ
-
-| Question | Answer |
-|----------|--------|
-| Where is the payment WARN in the critical task? | Not selected. Open `test_warn_only` on DAG 3. |
-| Where are docs files? | After `docs_generate` / `dbt_docs_generate`: under `dbt_project/target/`. |

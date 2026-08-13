@@ -419,14 +419,17 @@ SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;      -- prod (after deploy)
 
 ## 3. Airflow + dbt Core
 
-**Install (copy the three class DAGs first):** [`airflow-install.md`](airflow-install.md)  
-**DAGs:** [`airflow-dags.md`](airflow-dags.md) — run them from the **Airflow UI** (Graph → Trigger → task Log).
+**Install:** [`airflow-install.md`](airflow-install.md)  
+**DAGs:** [`airflow-dags.md`](airflow-dags.md) — run from the **Airflow UI** (Graph → Trigger → Log).
 
 | Order | DAG id | What it shows |
 |------:|--------|---------------|
-| 1 | `demo_schedule_retries` | Schedule + retries (no dbt) |
-| 2 | `dbt_core_commands` | `run` → `tag:critical` → `build` → `docs generate` |
-| 3 | `dbt_orchestrated_pipeline` | Layered run + critical gate + warn_only + publish |
+| — | `example_*` (if listed) | Airflow’s own sample DAGs |
+| 1 | `demo_schedule_retries` | Schedule + retries |
+| 2 | `demo_task_order` | Task order (`>>`) |
+| 3 | `demo_parallel_join` | Parallel tasks then join |
+| 4 | `dbt_core_commands` | dbt run / critical / build / docs |
+| 5 | `dbt_orchestrated_pipeline` | Layered run + gates + publish |
 
 ---
 

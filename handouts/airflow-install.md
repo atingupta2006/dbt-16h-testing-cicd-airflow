@@ -5,7 +5,7 @@ Version: **Apache Airflow 2.9.3**.
 
 Repo: https://github.com/atingupta2006/dbt-16h-testing-cicd-airflow  
 
-After this, use [`airflow-dags.md`](airflow-dags.md) for the three class DAGs (also linked from [`student-commands.md`](student-commands.md) §3).
+After this, use [`airflow-dags.md`](airflow-dags.md) (also linked from [`student-commands.md`](student-commands.md) §3).
 
 ---
 
@@ -36,12 +36,7 @@ export AIRFLOW_HOME=~/training/airflow_home
 source ~/training/venvs/airflow/bin/activate
 
 REPO_DIR="$(pwd)"
-# Class DAGs only (+ shared helper)
-cp "$REPO_DIR"/airflow/dags/demo_schedule_retries.py \
-   "$REPO_DIR"/airflow/dags/dbt_core_commands.py \
-   "$REPO_DIR"/airflow/dags/dbt_orchestrated_pipeline.py \
-   "$REPO_DIR"/airflow/dags/dbt_paths.py \
-   "$AIRFLOW_HOME/dags/"
+cp "$REPO_DIR"/airflow/dags/*.py "$AIRFLOW_HOME/dags/"
 
 export DBT_BIN="$REPO_DIR/dbt_project/.venv/bin/dbt"
 export DBT_PROJECT_DIR="$REPO_DIR/dbt_project"
@@ -62,6 +57,7 @@ export AIRFLOW_HOME=~/training/airflow_home
 source ~/training/venvs/airflow/bin/activate
 # export DBT_* as in §2 (same shell)
 
+# First start may also show Airflow's own example_* DAGs in the UI
 airflow standalone
 ```
 

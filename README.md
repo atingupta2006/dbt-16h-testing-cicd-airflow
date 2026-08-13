@@ -15,7 +15,7 @@ Course project for advanced testing, GitHub Actions CI/CD, and Airflow with dbt 
 | `handouts/student-commands.md` | Command index |
 | `handouts/olist-data-and-flow.md` | Olist schema and data flow |
 | `handouts/cicd-and-deployment.md` | GitHub Actions CI + prod deploy |
-| `handouts/airflow-dags.md` | Airflow DAGs used in class |
+| `handouts/airflow-dags.md` | Airflow DAGs (basics + dbt) |
 | `handouts/e2e-production-walkthrough.md` | End-to-end session order |
 | `course-content.txt` | Course topics |
 | `.env.example` | Names of environment variables you will need |
