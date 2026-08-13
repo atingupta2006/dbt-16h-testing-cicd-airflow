@@ -1,7 +1,10 @@
-"""Airflow basics: task order (A must finish before B).
+"""Airflow basics: task order (Olist-style story).
 
-UI: open Graph — arrows show the order — then Trigger.
-No dbt.
+Story (simulated — no Snowflake / dbt yet):
+  Before dbt runs, RAW must be validated, bad rows set aside, then marked ready.
+  Order matters: validate → quarantine → publish.
+
+UI: open Graph — arrows show the chain — then Trigger.
 """
 
 from datetime import datetime, timedelta
@@ -17,28 +20,39 @@ default_args = {
 
 with DAG(
     dag_id="demo_task_order",
-    description="Task order: start >> process >> finish",
+    description="Olist: validate RAW → quarantine → publish ready (ordered)",
     start_date=datetime(2024, 1, 1),
     schedule=None,
     catchup=False,
     default_args=default_args,
-    tags=["demo", "airflow"],
+    tags=["demo", "airflow", "olist"],
 ) as dag:
 
-    start = BashOperator(
-        task_id="start",
-        bash_command='echo "START at $(date -u)"',
+    validate_raw_files = BashOperator(
+        task_id="validate_raw_files",
+        bash_command=(
+            'sleep 1; '
+            'echo "[$(date -u +%H:%M:%S)] VALIDATE: required Olist CSVs present '
+            '(orders, order_items, payments, customers, …)"'
+        ),
     )
 
-    process = BashOperator(
-        task_id="process",
-        bash_command='echo "PROCESS at $(date -u)"',
+    quarantine_bad_rows = BashOperator(
+        task_id="quarantine_bad_rows",
+        bash_command=(
+            'sleep 1; '
+            'echo "[$(date -u +%H:%M:%S)] QUARANTINE: flag known dirty RAW rows '
+            '(e.g. zero payment_value) for later warn_only tests"'
+        ),
     )
 
-    finish = BashOperator(
-        task_id="finish",
-        bash_command='echo "FINISH at $(date -u)"',
+    publish_raw_ready = BashOperator(
+        task_id="publish_raw_ready",
+        bash_command=(
+            'echo "[$(date -u +%H:%M:%S)] PUBLISH: RAW ready for staging/dbt '
+            '(next: parallel ingest demo or dbt DAGs)"'
+        ),
     )
 
     # Arrow in the Graph = this order
-    start >> process >> finish
+    validate_raw_files >> quarantine_bad_rows >> publish_raw_ready

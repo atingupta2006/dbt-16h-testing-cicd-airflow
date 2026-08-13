@@ -47,7 +47,9 @@ If you see **no** `example_*` DAGs, examples were turned off in config — use t
 
 **File:** `airflow/dags/demo_schedule_retries.py`
 
-**Graph:** one task — `hello` (prints a short message).
+**Story (simulated):** a **daily** job that checks Olist **RAW** landings are fresh. If the check fails, Airflow **retries**.
+
+**Graph:** one task — `check_raw_olist_freshness`.
 
 | Setting in code | Meaning |
 |-----------------|---------|
@@ -57,8 +59,8 @@ If you see **no** `example_*` DAGs, examples were turned off in config — use t
 
 In class, **Trigger** it so you see a run now (do not wait for the daily schedule).
 
-**Do:** UI → `demo_schedule_retries` → Graph → Trigger → task `hello` → Log.  
-**Success:** green task; log like `Airflow demo OK at …`.
+**Do:** UI → `demo_schedule_retries` → Graph → Trigger → task `check_raw_olist_freshness` → Log.  
+**Success:** green task; log like `DAILY CHECK: RAW Olist landings` and `OK — freshness within SLA`.
 
 ---
 
@@ -68,16 +70,24 @@ In class, **Trigger** it so you see a run now (do not wait for the daily schedul
 
 **File:** `airflow/dags/demo_task_order.py`
 
+**Story (simulated):** before dbt, RAW must be validated, dirty rows noted, then marked ready — **in that order**.
+
 **Graph:**
 
 ```text
-start → process → finish
+validate_raw_files → quarantine_bad_rows → publish_raw_ready
 ```
 
-In code this is written as: `start >> process >> finish`.
+In code: `validate_raw_files >> quarantine_bad_rows >> publish_raw_ready`.
+
+| Task | Log idea |
+|------|----------|
+| `validate_raw_files` | required Olist CSVs present |
+| `quarantine_bad_rows` | flag known dirty RAW rows |
+| `publish_raw_ready` | RAW ready for staging/dbt |
 
 **Do:** UI → `demo_task_order` → Graph (see the chain) → Trigger → open each task Log in order.  
-**Success:** all three green; logs show START, then PROCESS, then FINISH.
+**Success:** all three green; VALIDATE, then QUARANTINE, then PUBLISH.
 
 ---
 
