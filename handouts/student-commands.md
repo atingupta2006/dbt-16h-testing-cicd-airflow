@@ -400,7 +400,7 @@ Done. PASS=3 WARN=0 ERROR=0 SKIP=0 TOTAL=3
 ## 2. CI/CD (GitHub Actions)
 
 **Full guide:** [`cicd-and-deployment.md`](cicd-and-deployment.md)  
-(two CI jobs: Build dev → Gate critical; one Deploy Prod job; three strategies; Snowflake proof).
+(one CI job: `dbt build` on dev; one Deploy job: `dbt build` on prod; critical tests gate inside build).
 
 ```bash
 cd ..   # if you are still inside dbt_project
@@ -410,7 +410,7 @@ git commit -m "practice: ci check"
 git push -u origin HEAD
 ```
 
-PR → **dbt CI** (both jobs green; WARN on build OK). Merge `main` → **dbt Deploy Prod**.
+PR → **dbt CI** (Build green; WARN on build OK). Merge `main` → **dbt Deploy Prod**.
 
 ```sql
 SELECT COUNT(*) FROM OLIST_DB.ANALYTICS_DEV.FCT_ORDERS;  -- dev

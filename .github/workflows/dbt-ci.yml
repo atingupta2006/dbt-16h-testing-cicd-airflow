@@ -1,5 +1,5 @@
-# PR pipeline: build on ANALYTICS_DEV, then a must-pass critical-test gate.
-# Two jobs on purpose — easy to narrate in class (build vs gate).
+# PR pipeline: one job — dbt build on ANALYTICS_DEV.
+# Critical tests run inside `dbt build` (severity: error). No second test pass (saves warehouse time).
 name: dbt CI
 
 on:
@@ -50,59 +50,13 @@ jobs:
       - name: dbt build (dev → ANALYTICS_DEV)
         run: dbt build --target dev
 
-      - name: CI build summary
+      - name: CI summary
         if: always()
         run: |
           {
             echo "## dbt CI — Build (dev)"
             echo "- Target: \`dev\` → schema \`ANALYTICS_DEV\`"
-            echo "- \`dbt build\` can show WARN on warn_only tests; job is green when ERROR=0"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  gate_critical:
-    name: Gate (critical tests)
-    needs: build_dev
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: dbt_project
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-
-      - name: Install dbt
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Create profiles.yml
-        run: |
-          mkdir -p .ci_profiles
-          cp profiles.yml.example .ci_profiles/profiles.yml
-
-      - name: dbt test (tag:critical)
-        run: dbt test --target dev --select tag:critical
-
-      - name: Upload dbt run results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dbt-ci-run-results
-          path: |
-            dbt_project/target/run_results.json
-            dbt_project/target/manifest.json
-          if-no-files-found: warn
-
-      - name: CI gate summary
-        if: always()
-        run: |
-          {
-            echo "## dbt CI — Gate (critical)"
-            echo "- Must-pass tests only: \`dbt test --select tag:critical\`"
-            echo "- Expect: PASS with WARN=0 ERROR=0"
-            echo "- warn_only tests are not in this job (same idea as Airflow)"
+            echo "- \`dbt build\` runs models + all tests once"
+            echo "- **Gate:** critical tests (severity error) fail this job if they fail"
+            echo "- warn_only may show WARN=2; job stays green when ERROR=0"
           } >> "$GITHUB_STEP_SUMMARY"

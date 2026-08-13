@@ -9,16 +9,17 @@ Command index: [`student-commands.md`](student-commands.md) §2
 
 ---
 
-## What “gate” means
+## What “gate” means (in this class)
 
-A **gate** is a **must-pass quality check** after the build.
+A **gate** = must-pass quality. Here that is the **`critical`** tests inside **`dbt build`**.
 
-- It is **not** a special dbt command — here it is a GitHub Actions **job** (or step) that runs `dbt test --select tag:critical`.
-- **Build** = run the project (may show WARN).  
-- **Gate** = only must-pass tests; expect `WARN=0 ERROR=0`.
-- If the gate fails, the Actions check is **red**. Whether that **blocks merging** the PR depends on GitHub branch protection (optional).
+- `dbt build` runs models **and** tests **once**.
+- Critical tests use `severity: error` → if they fail, the Actions job is **red**.
+- warn_only tests may show **WARN** → job can stay **green** when `ERROR=0`.
 
-Same idea on deploy: after `dbt build --target prod`, the critical-test step is the **prod gate**.
+We do **not** run `dbt test` again in a second job (that would cost extra Snowflake time for no class benefit).
+
+Airflow is different on purpose: it often runs `dbt test --select tag:critical` as its **own** task after `dbt run` (see [`airflow-dags.md`](airflow-dags.md)).
 
 ---
 
@@ -26,9 +27,9 @@ Same idea on deploy: after `dbt build --target prod`, the critical-test step is 
 
 | In a company | What we show here |
 |--------------|-------------------|
-| PR pipeline builds and tests a **dev** warehouse | **dbt CI** → `dbt build --target dev` → schema `ANALYTICS_DEV` |
-| A **gate** check fails if must-pass tests fail | Second CI job: `dbt test --select tag:critical` (merge is blocked only if branch protection requires that check) |
-| Deploy **promotes** to production | **dbt Deploy Prod** → `dbt build --target prod` → schema `ANALYTICS` |
+| PR pipeline builds and tests a **dev** warehouse | **dbt CI** → one job: `dbt build --target dev` → `ANALYTICS_DEV` |
+| Must-pass checks fail the pipeline | Critical tests inside that build (severity error) |
+| Deploy **promotes** to production | **dbt Deploy Prod** → `dbt build --target prod` → `ANALYTICS` |
 | Prod is not “the same table moved” | Two copies of `FCT_ORDERS` in two schemas |
 
 ---
@@ -37,14 +38,13 @@ Same idea on deploy: after `dbt build --target prod`, the critical-test step is 
 
 ```text
 Pull Request  →  dbt CI
-                   job 1: Build (dev)
-                   job 2: Gate (critical tests)   [needs job 1]
+                   one job: debug → parse → dbt build --target dev
 
 Merge to main →  dbt Deploy Prod
-                   one job: parse → build prod → critical tests
+                   one job: parse → dbt build --target prod
 ```
 
-Open **Actions** (or the Checks tab on the PR). You should see **two boxes** on CI (Build, then Gate).
+Open **Actions** (or the Checks tab on the PR). You should see **one** CI job: **Build (dev)**.
 
 ---
 
@@ -52,33 +52,17 @@ Open **Actions** (or the Checks tab on the PR). You should see **two boxes** on 
 
 ### dbt CI (on Pull Request)
 
-| Job | Steps | What “green” means |
-|-----|--------|-------------------|
-| **Build (dev)** | debug → parse → `dbt build --target dev` | Models + all tests ran on `ANALYTICS_DEV`. **WARN=2** on warn_only tests is OK if **ERROR=0**. |
-| **Gate (critical tests)** | `dbt test --select tag:critical` | Must-pass tests only. Expect **WARN=0 ERROR=0**. |
-
-**Artifact (optional):** the Gate job also uploads `run_results.json` and `manifest.json` from `dbt_project/target/`.  
-In Actions: open the run → **Artifacts** → `dbt-ci-run-results`. These are dbt’s machine-readable results (what ran / passed). You do **not** need them for class — the job log summary is enough.
-
-**Does `dbt build` already run critical tests?** Yes. `dbt build` runs models **and** their tests (including `tag:critical`). If a critical test fails, **Build (dev)** is already red.
-
-**Why a separate Gate job then?**
-
-| Reason | Plain meaning |
-|--------|----------------|
-| Clear Actions story | Box 1 = build (WARN OK). Box 2 = must-pass only (no WARN noise). |
-| Same idea as Airflow | Orchestrator often runs `dbt test --select tag:critical` as its own step — not a full rebuild. |
-| Explicit release check | Production pipelines often keep a dedicated quality gate even when build already tested. |
-
-So Gate is **not** “critical was skipped in build.” It is a **focused re-check** of must-pass tests (and a teaching parallel to Airflow).
+| Step | Command | What “green” means |
+|------|---------|-------------------|
+| debug / parse | connection + project OK | |
+| **dbt build (dev)** | models + **all** tests once | `ANALYTICS_DEV` updated. **WARN=2** OK if **ERROR=0**. Critical failure → job red. |
 
 ### dbt Deploy Prod (on push to `main`)
 
 | Step | Command | Writes to |
 |------|---------|-----------|
 | parse | `dbt parse --target prod` | (compile check) |
-| build | `dbt build --target prod` | `OLIST_DB.ANALYTICS` |
-| gate | `dbt test --target prod --select tag:critical` | same prod schema |
+| **dbt build (prod)** | models + all tests once | `OLIST_DB.ANALYTICS` |
 
 ---
 
@@ -87,10 +71,10 @@ So Gate is **not** “critical was skipped in build.” It is a **focused re-che
 | Strategy | How you prove it |
 |----------|------------------|
 | **1. Dev vs prod environments** | CI uses `dev` / `ANALYTICS_DEV`. Deploy uses `prod` / `ANALYTICS`. |
-| **2. Gate before release** | Deploy has a **critical test** step after the prod build. |
+| **2. Gate = critical inside build** | Critical tests fail the job if they fail (`severity: error`). |
 | **3. Promotion by rebuild** | dbt does **not** move tables. It builds again into the prod schema. Two `COUNT(*)` queries (below). |
 
-**If asked (say only, do not demo unless extra time):** rollback = revert the merge commit on `main` and let Deploy Prod run again.
+**If asked (say only):** rollback = revert the merge on `main` and let Deploy Prod run again.
 
 ---
 
@@ -105,19 +89,16 @@ git push -u origin HEAD
 ```
 
 1. GitHub → **Compare & pull request** → Create PR.  
-2. Wait for **dbt CI** — both jobs green.  
-3. Open **Build (dev)** log: you may see `WARN=2` and still green.  
-4. Open **Gate (critical tests)** log: `PASS=3 WARN=0 ERROR=0`.  
-5. Merge the PR to `main`.  
-6. **Actions** → **dbt Deploy Prod** → green.
+2. Wait for **dbt CI** → job **Build (dev)** green.  
+3. Open the build log: you may see `WARN=2` and still green (`ERROR=0`).  
+4. Merge the PR to `main`.  
+5. **Actions** → **dbt Deploy Prod** → green.
 
 ### What to click (Actions)
 
 1. Repo → **Actions** (or PR → **Checks**).  
-2. Click the run named **dbt CI**.  
-3. Click job **Build (dev)**, then job **Gate (critical tests)**.  
-4. After merge: Actions → **dbt Deploy Prod** → job **Deploy (prod)**.  
-5. Optional: run page → **Artifacts** → `dbt-ci-run-results`.
+2. Click the run **dbt CI** → job **Build (dev)**.  
+3. After merge: Actions → **dbt Deploy Prod** → job **Deploy (prod)**.
 
 ---
 
@@ -140,8 +121,8 @@ If prod was never deployed, the second query errors (`object does not exist`) �
 | Place | Typical result |
 |-------|----------------|
 | Local / CI `dbt build --target dev` | `Done. PASS=35 WARN=2 ERROR=0` |
-| CI / Deploy `tag:critical` | `Done. PASS=3 WARN=0 ERROR=0` |
-| Actions CI graph | Two jobs; Gate starts after Build |
+| Actions CI | One job **Build (dev)** |
+| Deploy | One job **Deploy (prod)** |
 
 ---
 
@@ -149,9 +130,8 @@ If prod was never deployed, the second query errors (`object does not exist`) �
 
 | Term | Meaning here |
 |------|----------------|
-| **Job** | A box on the Actions graph (own machine, own checkout) |
-| **Gate** | A must-pass check after the build (here: `dbt test --select tag:critical`). Not a dbt keyword — the job/step name we use for that check |
-| **Artifact** | A file GitHub saves from the job (here: dbt `run_results.json`) |
+| **Job** | A box on the Actions graph |
+| **Gate** | Must-pass quality — here, **critical** tests inside `dbt build` |
 | **Target** | dbt `dev` or `prod` in `profiles.yml` (different schemas) |
 
 ---
@@ -160,10 +140,10 @@ If prod was never deployed, the second query errors (`object does not exist`) �
 
 | Question | Answer |
 |----------|--------|
-| Why is CI green with WARN? | warn_only tests are heads-up. `dbt build` exits 0 when ERROR=0. |
-| Why a second CI job? | Build already runs all tests (critical included). Gate is a **focused re-check** of `tag:critical` only — clearer Actions story and same pattern as Airflow. The gate fails the Actions check; whether merge is blocked depends on branch protection. |
+| Why is CI green with WARN? | warn_only is heads-up. `dbt build` exits 0 when ERROR=0. |
+| Why not a second test job? | Build already ran all tests once. Re-running critical only costs warehouse time. |
+| Why does Airflow still run `tag:critical` alone? | After `dbt run` (models only), Airflow adds a dedicated test task — different shape than CI `build`. |
 | Did my table “move” to prod? | No. Prod is a second build into `ANALYTICS`. |
-| Gate vs Airflow? | Same selection: `tag:critical`. warn_only is not in the gate. |
 
 ---
 

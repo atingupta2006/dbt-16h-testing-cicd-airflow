@@ -35,7 +35,7 @@ dbt test --select tag:critical
 
 ### E3 — CI/CD + three strategies (~45–50 min)
 
-Follow [`cicd-and-deployment.md`](cicd-and-deployment.md): PR → two CI jobs → merge → Deploy Prod.
+Follow [`cicd-and-deployment.md`](cicd-and-deployment.md): PR → one CI build → merge → Deploy Prod.
 
 Say aloud: **dev vs prod schemas**, **gate before release**, **rebuild not move**.
 

@@ -1,5 +1,5 @@
-# Merge-to-main deploy: rebuild into ANALYTICS (prod), then critical-test gate.
-# One job, named steps — easy to walk in class.
+# Merge-to-main deploy: one build into ANALYTICS (prod).
+# Critical tests run inside `dbt build` — no second test pass.
 name: dbt Deploy Prod
 
 on:
@@ -48,19 +48,6 @@ jobs:
       - name: dbt build (prod → ANALYTICS)
         run: dbt build --target prod
 
-      - name: dbt test (tag:critical on prod)
-        run: dbt test --target prod --select tag:critical
-
-      - name: Upload dbt prod results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dbt-prod-run-results
-          path: |
-            dbt_project/target/run_results.json
-            dbt_project/target/manifest.json
-          if-no-files-found: warn
-
       - name: Deploy summary
         if: always()
         run: |
@@ -68,5 +55,5 @@ jobs:
             echo "## dbt Deploy Prod"
             echo "- Target: \`prod\` → schema \`ANALYTICS\` (not ANALYTICS_DEV)"
             echo "- Promotion = rebuild into the prod schema (tables are not moved)"
-            echo "- Gate: \`dbt test --select tag:critical\`"
+            echo "- Critical tests run inside \`dbt build\` (no second test pass)"
           } >> "$GITHUB_STEP_SUMMARY"

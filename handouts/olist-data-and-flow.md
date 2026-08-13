@@ -164,10 +164,10 @@ dbt build --target prod         # writes into ANALYTICS (separate copy)
 1. Snowflake RAW already loaded (trainer)
 2. dbt build --target dev                    → ANALYTICS_DEV
 3. GitHub PR → dbt CI
-      job 1: Build (dev)                     → ANALYTICS_DEV
-      job 2: Gate (critical tests)           → tag:critical must pass
+      one job: dbt build --target dev         → ANALYTICS_DEV
+      (critical tests gate the job inside build)
 4. Merge to main → dbt Deploy Prod
-      build + critical gate                  → ANALYTICS
+      one job: dbt build --target prod         → ANALYTICS
 5. Airflow (three class DAGs)
       demo_schedule_retries                  → schedule + retries
       dbt_core_commands                      → run / critical / build / docs
