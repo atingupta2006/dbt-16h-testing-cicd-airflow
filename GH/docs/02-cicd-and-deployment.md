@@ -39,3 +39,4 @@ After merge, confirm:
 ```sql
 SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;
 ```
+# GHA CI smoke 2026-08-13T02:44:19Z
