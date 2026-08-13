@@ -1,0 +1,3 @@
+# Pinned Airflow version for a dedicated virtualenv (keep separate from the dbt venv).
+# Install with the official constraints file for your Python version.
+apache-airflow==2.9.3

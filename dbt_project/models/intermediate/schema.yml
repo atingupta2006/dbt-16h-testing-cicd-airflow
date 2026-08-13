@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: int_order_items_aggregated
+    description: Order-grain item price and freight totals.
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+
+  - name: int_order_payments_aggregated
+    description: Order-grain payment totals.
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique

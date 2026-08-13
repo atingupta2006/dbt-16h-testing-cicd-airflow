@@ -1,0 +1,492 @@
+# Commands — DBT 16 Hours
+
+Command list for this course project.
+
+**Repository (use this only):** https://github.com/atingupta2006/dbt-16h-testing-cicd-airflow
+
+Use connection values shared in class. Prefer Linux (Ubuntu) for Airflow sections.
+
+Model layers in `dbt_project/models/`: **staging** → **intermediate** → **marts**.
+
+Dataset and flow: [`olist-data-and-flow.md`](olist-data-and-flow.md)  
+Airflow install (once): [`airflow-install.md`](airflow-install.md)  
+Concept only (not a lab): [`incremental-quick-look.md`](incremental-quick-look.md)
+
+**How to read dbt summaries:** look at the last line, e.g. `Done. PASS=35 WARN=2 ERROR=0`.  
+**ERROR=0** means nothing blocked the run. **WARN** means “heads-up” (dirty rows), not a hard stop.  
+When you see WARN or FAIL, do not stop at the summary — use **§1e** to open the test name, YAML, generic SQL, compiled SQL, and the actual rows.
+
+---
+
+## 0. Environment (once)
+
+```bash
+git clone https://github.com/atingupta2006/dbt-16h-testing-cicd-airflow.git
+cd dbt-16h-testing-cicd-airflow
+```
+
+### dbt virtualenv
+
+```bash
+cd dbt_project
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Snowflake profile and env
+
+```bash
+mkdir -p ~/.dbt
+cp profiles.yml.example ~/.dbt/profiles.yml
+```
+
+Create `~/.dbt/env.sh` (fill in values from class):
+
+```bash
+cat > ~/.dbt/env.sh <<'EOF'
+export SNOWFLAKE_ACCOUNT="..."
+export SNOWFLAKE_USER="..."
+export SNOWFLAKE_PASSWORD="..."
+export SNOWFLAKE_ROLE="..."
+export SNOWFLAKE_DATABASE="OLIST_DB"
+export SNOWFLAKE_WAREHOUSE="..."
+export SNOWFLAKE_SCHEMA_DEV="ANALYTICS_DEV"
+export SNOWFLAKE_SCHEMA_PROD="ANALYTICS"
+EOF
+chmod 600 ~/.dbt/env.sh
+source ~/.dbt/env.sh
+```
+
+### Smoke test
+
+```bash
+# expect: staging  intermediate  marts
+ls models
+dbt debug
+dbt build --target dev
+```
+
+**Expect — `dbt debug`:**
+
+```text
+All checks passed!
+```
+
+**Expect — `dbt build --target dev`:** builds staging → intermediate → marts, then runs tests.  
+Summary should look like:
+
+```text
+Done. PASS=35 WARN=2 ERROR=0 SKIP=0 TOTAL=37
+```
+
+The **2 WARN**s are expected (dirty raw rows on staging). **ERROR=0** is required.  
+Scroll the log for lines like `WARN 9 positive_value_stg_payments_...` and `WARN 8 not_null_if_stg_orders_...` — those names are what you inspect in §1e.
+
+In later sections, always:
+
+```bash
+cd dbt_project
+source .venv/bin/activate
+source ~/.dbt/env.sh
+```
+
+---
+
+## 1. Advanced testing
+
+### Files
+
+- `dbt_project/tests/generic/positive_value.sql`
+- `dbt_project/tests/generic/not_null_if.sql`
+- `dbt_project/models/staging/schema.yml`
+- `dbt_project/models/intermediate/schema.yml`
+- `dbt_project/models/intermediate/int_order_items_aggregated.sql`
+- `dbt_project/models/intermediate/int_order_payments_aggregated.sql`
+- `dbt_project/models/marts/schema.yml`
+
+### Commands
+
+```bash
+cd dbt_project
+source .venv/bin/activate
+source ~/.dbt/env.sh
+```
+
+#### 1a. Foundations — run can succeed while some rows are dirty
+
+```bash
+dbt run --select stg_payments
+dbt test --select stg_payments
+```
+
+**Expect:** model builds OK; one payment test **warns** (about 9 rows with `payment_value` = 0).
+
+```text
+Done. PASS=2 WARN=1 ERROR=0 SKIP=0 TOTAL=3
+```
+
+In the log you should also see a line like:
+
+```text
+WARN 9 positive_value_stg_payments_payment_value
+```
+
+That means: test name `positive_value` on model `stg_payments` column `payment_value`, and **9** rows broke the rule.  
+Use **§1e** next time you want the full inspect path (YAML → SQL → compiled → data). Quick data check:
+
+```bash
+dbt show --limit 10 --inline "select order_id, payment_value from {{ ref('stg_payments') }} where payment_value <= 0"
+```
+
+Use `--limit` on the command; do **not** put `LIMIT` inside the SQL.
+
+**Expect (sample):**
+
+```text
+| ORDER_ID             | PAYMENT_VALUE |
+| -------------------- | ------------- |
+| 8bcbe01d44d147f90... |             0 |
+| fa65dad1b0e818e3c... |             0 |
+...
+```
+
+#### 1b. Built-in tests on a model
+
+```bash
+dbt test --select stg_customers
+```
+
+**Expect:** all pass (example: unique / not_null on `customer_id`).
+
+```text
+Done. PASS=4 WARN=0 ERROR=0 SKIP=0 TOTAL=4
+```
+
+#### 1c. Custom generic tests (by type + name)
+
+```bash
+dbt test --select "test_type:generic,test_name:positive_value"
+dbt test --select "test_type:generic,test_name:not_null_if"
+```
+
+**Expect — `positive_value`:** most pass; staging payments still **warn**.
+
+```text
+Done. PASS=3 WARN=1 ERROR=0 SKIP=0 TOTAL=4
+```
+
+**Expect — `not_null_if`:** mart **passes** (dirty delivered rows filtered out); staging **warns** (~8 rows).
+
+```text
+Done. PASS=1 WARN=1 ERROR=0 SKIP=0 TOTAL=2
+```
+
+#### 1d. Tags — must-pass vs warn-only
+
+```bash
+dbt test --select tag:critical
+dbt test --select tag:warn_only
+dbt build --target dev
+```
+
+**`tag:critical`** = must-pass checks. **Expect no warnings:**
+
+```text
+Done. PASS=3 WARN=0 ERROR=0 SKIP=0 TOTAL=3
+```
+
+**`tag:warn_only`** = warning-only checks (dirty raw data). **Expect warnings, still ERROR=0:**
+
+```text
+Done. PASS=2 WARN=2 ERROR=0 SKIP=0 TOTAL=4
+```
+
+**`dbt build --target dev` again:** same idea as smoke test — **ERROR=0**, **WARN=2** OK.
+
+```text
+Done. PASS=35 WARN=2 ERROR=0 SKIP=0 TOTAL=37
+```
+
+#### 1e. Interpret and validate a WARN (or FAIL)
+
+When the summary shows WARN or ERROR, walk this path so you can **prove** what broke (same idea for FAIL in the optional fail→fix loop).
+
+**Step 1 — Read the status line (not only the summary)**
+
+Example from a real run:
+
+```text
+WARN 9 positive_value_stg_payments_payment_value
+WARN 8 not_null_if_stg_orders_order_delivered_customer_date__order_status__delivered
+```
+
+| Piece | Meaning |
+|-------|---------|
+| `WARN` / `FAIL` | Severity outcome for this test |
+| `9` / `8` | How many rows the test returned (bad rows) |
+| Name after that | Which test + model + column (and parameters for `not_null_if`) |
+
+**Step 2 — Find the YAML config (why warn vs error)**
+
+Open `models/staging/schema.yml` (and for mart: `models/marts/schema.yml`).
+
+Look for:
+
+- `positive_value` under `stg_payments.payment_value` → `severity: warn`, `tags: ["warn_only"]`
+- `not_null_if` under `stg_orders.order_delivered_customer_date` → same warn / warn_only
+- On **mart** `fct_orders`, the matching `not_null_if` / some `positive_value` use `severity: error` + `tags: ["critical"]`
+
+That is why staging can WARN while `tag:critical` stays clean.
+
+**Step 3 — Read the generic test code (the rule)**
+
+```bash
+# from dbt_project/
+less tests/generic/positive_value.sql
+less tests/generic/not_null_if.sql
+```
+
+- `positive_value` selects rows where the column is not null and `<= 0`.
+- `not_null_if` selects rows where `condition_column = condition_value` and the tested column **is null**.
+
+The test “fails/warns” when that SELECT returns one or more rows.
+
+**Step 4 — Open the compiled SQL (the exact query dbt ran)**
+
+After any `dbt test` / `dbt build`, compiled tests land under `target/compiled/`:
+
+```bash
+# list compiled tests (names match the log)
+find target/compiled -type f -name '*positive_value*stg_payments*' 2>/dev/null | head
+find target/compiled -type f -name '*not_null_if*stg_orders*' 2>/dev/null | head
+```
+
+Open one file (editor or `less`). You should see plain SQL against `ANALYTICS_DEV` (or your schema) — no Jinja.  
+That SQL is what Snowflake ran; the row count in the WARN line is how many rows it returned.
+
+**Step 5 — Inspect the data (prove the rows exist)**
+
+Payments (zeros):
+
+```bash
+dbt show --limit 10 --inline "select order_id, payment_value from {{ ref('stg_payments') }} where payment_value <= 0"
+```
+
+Delivered with null delivery date:
+
+```bash
+dbt show --limit 10 --inline "select order_id, order_status, order_delivered_customer_date from {{ ref('stg_orders') }} where order_status = 'delivered' and order_delivered_customer_date is null"
+```
+
+Optional same checks in Snowflake worksheet (dev schema):
+
+```sql
+SELECT order_id, payment_value
+FROM OLIST_DB.ANALYTICS_DEV.STG_PAYMENTS
+WHERE payment_value <= 0;
+
+SELECT order_id, order_status, order_delivered_customer_date
+FROM OLIST_DB.ANALYTICS_DEV.STG_ORDERS
+WHERE order_status = 'delivered'
+  AND order_delivered_customer_date IS NULL;
+```
+
+**Step 6 — Validate why the mart critical test still passes**
+
+Open `models/marts/fct_orders.sql` — it filters out delivered rows with a null delivery date (and only keeps orders that join to items).  
+Then re-check:
+
+```bash
+dbt show --limit 5 --inline "select order_id, order_status, order_delivered_customer_date from {{ ref('fct_orders') }} where order_status = 'delivered' and order_delivered_customer_date is null"
+dbt test --select tag:critical
+```
+
+**Expect:** no (or empty) bad mart rows for that rule; critical stays `PASS=3 WARN=0 ERROR=0`.
+
+**Quick checklist**
+
+| Question | Where to look |
+|----------|----------------|
+| Did anything block the run? | Summary: `ERROR` must be 0 (unless you are in fail→fix) |
+| Which test / how many rows? | WARN/FAIL line in the log |
+| Warn or hard fail by design? | `schema.yml` → `severity` + `tags` |
+| What is the rule? | `tests/generic/*.sql` |
+| Exact SQL that ran? | `target/compiled/...` |
+| Are the dirty rows real? | `dbt show` or Snowflake |
+| Why is mart still green? | `fct_orders.sql` filter + `tag:critical` |
+
+### Understanding `--select`, tags, and parameters
+
+#### Why `--select`?
+
+Without `--select`, `dbt test` runs **all** tests.  
+With `--select`, you choose a **smaller set** (faster demos / clearer CI).
+
+These words are **dbt selection methods** (not Snowflake SQL).
+
+| Example | Plain meaning |
+|---------|----------------|
+| `dbt test --select stg_customers` | Tests for the **model** `stg_customers`. |
+| `dbt test --select "test_type:generic,test_name:positive_value"` | All **generic** tests named **`positive_value`**. |
+| `dbt test --select tag:critical` | Only tests tagged **critical** (must pass). |
+| `dbt test --select tag:warn_only` | Only tests tagged **warn_only** (warnings OK). |
+
+| Piece | Meaning |
+|-------|---------|
+| `test_type:generic` | Reusable tests (`tests/generic/` or built-ins like `not_null`). |
+| `test_name:positive_value` | Name from `{% test positive_value ... %}`. |
+| `test_name:not_null_if` | Name from `{% test not_null_if ... %}`. |
+| `tag:...` | Label in YAML `tags:`. |
+| `,` | **AND** (both must match). |
+| `"..."` | Quotes so the shell does not break on the comma. |
+
+#### Why tags? (`critical` vs `warn_only`)
+
+| Tag | Plain meaning | If data breaks the rule |
+|-----|----------------|-------------------------|
+| `critical` | **Must pass** | Counts as **ERROR** → treat as a failed gate |
+| `warn_only` | **Warning only** | Counts as **WARN** → continue; it is a heads-up |
+
+So `dbt test --select tag:warn_only` means: “Show me the warn-only group.” Seeing WARN is **expected** for some Olist rows.
+
+#### Why parameters?
+
+A **generic** test is one reusable rule. **Parameters** in YAML change how that rule is applied.
+
+Example — `not_null_if`: “this column must not be null **when** another column equals a value.”  
+Parameters: `condition_column`, `condition_value` → here, when `order_status = delivered`, delivery date must not be null.
+
+#### Severity vs tags
+
+- **Tag** = which **group** to run (`--select tag:...`)  
+- **Severity** in YAML (`error` / `warn`) = how hard a failure counts  
+
+In this project: `critical` ↔ `severity: error`; `warn_only` ↔ `severity: warn`.
+
+### Fail → fix (optional)
+
+Use the same interpret path as **§1e**, but expect **FAIL / ERROR** instead of WARN.
+
+1. Temporarily edit `tests/generic/positive_value.sql` so valid rows fail (e.g. change `<= 0` to `< 1000000`).  
+2. `dbt test --select tag:critical` → expect **FAIL** and `ERROR > 0`.  
+3. Read the FAIL line → open YAML / generic SQL / `target/compiled/` → `dbt show` the bad rows (§1e steps 1–5).  
+4. Restore the original `positive_value.sql`.  
+5. `dbt test --select tag:critical` → expect:
+
+```text
+Done. PASS=3 WARN=0 ERROR=0 SKIP=0 TOTAL=3
+```
+
+---
+
+## 2. CI/CD (GitHub Actions)
+
+### Files
+
+- `.github/workflows/dbt-ci.yml`
+- `.github/workflows/dbt-deploy.yml`
+- `dbt_project/profiles.yml.example`
+
+### Git steps (from repo root)
+
+```bash
+cd ..   # if you are still inside dbt_project
+git checkout -b practice/ci-check
+# optional: make a small change
+git add -A
+git commit -m "practice: ci check"
+git push -u origin HEAD
+```
+
+1. Open a Pull Request → wait for **dbt CI** (`dbt build --target dev`).  
+2. Fix until CI is green. The job can still show the same staging **WARN=2** as a local build — that is OK when the check is green (`ERROR=0`).  
+3. Merge to `main` → **dbt Deploy Prod** runs `dbt build --target prod` (writes `ANALYTICS`, not `ANALYTICS_DEV`).
+
+### Snowflake checks
+
+```sql
+SELECT COUNT(*) FROM OLIST_DB.ANALYTICS_DEV.FCT_ORDERS;
+SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;
+```
+
+(Second query needs a successful prod deploy.)
+
+---
+
+## 3. Airflow + dbt Core
+
+**Install Airflow first (separate document):** [`airflow-install.md`](airflow-install.md)  
+(venv, `pip` + constraints, `AIRFLOW_HOME`, DAG symlinks, `DBT_*`, start UI).
+
+### Files
+
+- `airflow/dags/demo_schedule_retries.py`
+- `airflow/dags/dbt_core_run_test.py`
+- `airflow/dags/dbt_core_e2e_pipeline.py`
+- `airflow/dags/dbt_paths.py`
+
+### Before DAG demos
+
+From **repo root** (after install):
+
+```bash
+export AIRFLOW_HOME=~/training/airflow_home
+source ~/training/venvs/airflow/bin/activate
+export DBT_BIN="$(pwd)/dbt_project/.venv/bin/dbt"
+export DBT_PROJECT_DIR="$(pwd)/dbt_project"
+export DBT_ENV_FILE="$HOME/.dbt/env.sh"
+```
+
+The dbt DAGs run `dbt test --select tag:critical` (must-pass only). They do **not** run `tag:warn_only`, so Airflow stays green even when a full `dbt build` shows WARN=2.
+
+### CLI DAG tests
+
+Use a new timestamp each re-run (repo root, Airflow venv + `DBT_*` already exported):
+
+```bash
+RUN_DATE="$(date -u +%Y-%m-%dT%H:%M:%S)"
+
+airflow dags test demo_schedule_retries "$RUN_DATE"
+airflow dags test dbt_core_run_test "$RUN_DATE"
+airflow dags test dbt_core_e2e_pipeline "$RUN_DATE"
+```
+
+### UI
+
+1. Open Airflow UI (URL shared in class).  
+2. Trigger: `demo_schedule_retries`, `dbt_core_run_test`, `dbt_core_e2e_pipeline`.  
+3. Open logs for `dbt_run` and `dbt_test`.
+
+---
+
+## 4. End-to-end
+
+```bash
+cd dbt_project
+source .venv/bin/activate
+source ~/.dbt/env.sh
+
+dbt build --target dev
+dbt test --select tag:critical
+```
+
+**Expect:** build `PASS=35 WARN=2 ERROR=0`; critical `PASS=3 WARN=0 ERROR=0`.
+
+Then from **repo root** (Airflow venv + `DBT_*` as in §3):
+
+```bash
+export AIRFLOW_HOME=~/training/airflow_home
+source ~/training/venvs/airflow/bin/activate
+export DBT_BIN="$(pwd)/dbt_project/.venv/bin/dbt"
+export DBT_PROJECT_DIR="$(pwd)/dbt_project"
+export DBT_ENV_FILE="$HOME/.dbt/env.sh"
+
+RUN_DATE="$(date -u +%Y-%m-%dT%H:%M:%S)"
+airflow dags test dbt_core_e2e_pipeline "$RUN_DATE"
+```
+
+```sql
+SELECT COUNT(*) FROM OLIST_DB.ANALYTICS_DEV.FCT_ORDERS;
+SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;
+```

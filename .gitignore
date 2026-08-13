@@ -1,0 +1,85 @@
+# =============================================================================
+# Student-shared tree = DEMO MINIMUM only
+# Keep local trainer files; do not push them to the student GitHub repo.
+# =============================================================================
+
+# --- Trainer-only (never share) ---
+internals/
+GH/
+scripts/
+data/
+.cursor/
+**/trainer-demo/
+**/demo-scripts/
+
+# Authoring / batch admin
+**/dry-run-notes.md
+**/known-failures.md
+**/*SECRET*
+**/*secret*
+**/credentials*
+**/pax-details*
+**/participants*
+**/vm-env.sh
+Finance/
+*.xlsx
+*.docx
+*.pdf
+*.zip
+
+# --- Secrets & local credentials ---
+.env
+.env.*
+!.env.example
+**/env.sh
+**/.dbt/env.sh
+profiles.yml
+**/.dbt/profiles.yml
+!**/profiles.yml.example
+*.pem
+*.p8
+*.key
+
+# --- Python ---
+.venv/
+venv/
+env/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# --- dbt runtime ---
+**/target/
+**/dbt_packages/
+**/logs/
+**/.ci_profiles/
+
+# --- Airflow local runtime ---
+airflow_home/
+**/airflow_home/
+airflow/logs/
+**/airflow.db
+**/airflow.cfg
+**/webserver_config.py
+**/simple_auth_manager_passwords.json.generated
+**/standalone_admin_password.txt
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Optional local READMEs (not required for demos)
+airflow/README.md
+dbt_project/README.md
+
+# Local dry-run / session capture (trainer only)
+outputs.txt
