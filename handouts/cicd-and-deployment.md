@@ -17,7 +17,7 @@ A **gate** = must-pass quality. Here that is the **`critical`** tests inside **`
 - Critical tests use `severity: error` → if they fail, the Actions job is **red**.
 - warn_only tests may show **WARN** → job can stay **green** when `ERROR=0`.
 
-We do **not** run `dbt test` again in a second job (that would cost extra Snowflake time for no class benefit).
+We do **not** run `dbt test` again in a second job — `dbt build` already ran all tests once (extra warehouse cost for the same checks).
 
 Airflow is different on purpose: it often runs `dbt test --select tag:critical` as its **own** task after `dbt run` (see [`airflow-dags.md`](airflow-dags.md)).
 
@@ -144,13 +144,3 @@ If prod was never deployed, the second query errors (`object does not exist`) �
 | Why not a second test job? | Build already ran all tests once. Re-running critical only costs warehouse time. |
 | Why does Airflow still run `tag:critical` alone? | After `dbt run` (models only), Airflow adds a dedicated test task — different shape than CI `build`. |
 | Did my table “move” to prod? | No. Prod is a second build into `ANALYTICS`. |
-
----
-
-## Trainer checklist (pre-open)
-
-- [ ] Repo + **Actions** tab  
-- [ ] Snowflake worksheet with the two `COUNT(*)` queries  
-- [ ] `dbt-ci.yml` / `dbt-deploy.yml` / `profiles.yml.example` ready to show  
-- [ ] Secrets already set on the student GitHub repo  
-- [ ] Prefer one live demo PR at a time (shared `ANALYTICS_DEV`)

@@ -78,7 +78,7 @@ dbt_run → dbt_test_critical → dbt_build → dbt_docs_generate
 | `dbt_run` | `run --target dev` | Models only |
 | `dbt_test_critical` | `test --select tag:critical` | Must-pass; expect `PASS=3 WARN=0 ERROR=0` |
 | `dbt_build` | `build --target dev` | All tests too; `WARN=2` OK |
-| `dbt_docs_generate` | `docs generate` | Writes `dbt_project/target/index.html` (no docs server in class) |
+| `dbt_docs_generate` | `docs generate` | Writes `dbt_project/target/index.html` |
 
 Walk the graph left to right. The first two tasks show the core pattern (`run` then must-pass tests); `build` and `docs generate` complete the same DAG.
 
@@ -143,14 +143,4 @@ Older `dbt_core_run_test` / `dbt_core_e2e_pipeline` files were removed from the 
 | Is `airflow dags test` the same as `dbt test`? | No. It runs the **whole DAG** once from the CLI. |
 | Why a new `$RUN_DATE`? | Airflow treats each timestamp as a run. Reuse can look skipped/confusing. |
 | Where did payment WARN go in critical? | Not selected. See `test_warn_only` on DAG 3. |
-| Docs site? | We only **generate** files under `target/`. No `dbt docs serve` in class. |
-
----
-
-## Trainer checklist
-
-- [ ] DAGs copied to `$AIRFLOW_HOME/dags`; Airflow restarted if needed  
-- [ ] `DBT_*` exported in the **same** process that runs standalone  
-- [ ] Show DAG 1 first (no warehouse wait)  
-- [ ] DAG 2: open `dbt_test_critical` log  
-- [ ] DAG 3: Graph before Trigger  
+| Docs site? | We only **generate** files under `target/` (no `dbt docs serve` in this path). |

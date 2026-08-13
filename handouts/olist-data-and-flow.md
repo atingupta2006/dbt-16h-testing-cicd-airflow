@@ -161,7 +161,7 @@ dbt build --target prod         # writes into ANALYTICS (separate copy)
 ### C. Delivery path used in class
 
 ```text
-1. Snowflake RAW already loaded (trainer)
+1. Snowflake RAW already loaded
 2. dbt build --target dev                    → ANALYTICS_DEV
 3. GitHub PR → dbt CI
       one job: dbt build --target dev         → ANALYTICS_DEV

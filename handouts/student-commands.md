@@ -424,8 +424,8 @@ SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;      -- prod (after deploy)
 **Install (copy the three class DAGs first):** [`airflow-install.md`](airflow-install.md)  
 **DAGs (use these three):** [`airflow-dags.md`](airflow-dags.md)
 
-| Order | DAG id | Point of the demo |
-|------:|--------|-------------------|
+| Order | DAG id | What it shows |
+|------:|--------|---------------|
 | 1 | `demo_schedule_retries` | Schedule + retries (no dbt) |
 | 2 | `dbt_core_commands` | `run` → `tag:critical` → `build` → `docs generate` |
 | 3 | `dbt_orchestrated_pipeline` | Layered run + critical gate + warn_only + publish |

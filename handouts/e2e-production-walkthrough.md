@@ -37,7 +37,7 @@ dbt test --select tag:critical
 
 Follow [`cicd-and-deployment.md`](cicd-and-deployment.md): PR → one CI build → merge → Deploy Prod.
 
-Say aloud: **dev vs prod schemas**, **gate before release**, **rebuild not move**.
+Remember the three strategies: **dev vs prod schemas**, **gate = critical inside build**, **rebuild not move**.
 
 ### E4 — Snowflake (~15 min)
 
