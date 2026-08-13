@@ -199,7 +199,7 @@ dbt build --target dev
 Done. PASS=3 WARN=0 ERROR=0 SKIP=0 TOTAL=3
 ```
 
-**`tag:warn_only`** = warning-only checks (dirty raw data). **Expect warnings, still ERROR=0:**
+**`tag:warn_only`** = warning-only checks (dirty raw data). There are **four** tests in this tag; typically **two** WARN (zero payments + delivered-null dates). The other two usually PASS. Summary still looks like:
 
 ```text
 Done. PASS=2 WARN=2 ERROR=0 SKIP=0 TOTAL=4
@@ -421,7 +421,7 @@ SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;      -- prod (after deploy)
 
 ## 3. Airflow + dbt Core
 
-**Install:** [`airflow-install.md`](airflow-install.md)  
+**Install (copy the three class DAGs first):** [`airflow-install.md`](airflow-install.md)  
 **DAGs (use these three):** [`airflow-dags.md`](airflow-dags.md)
 
 | Order | DAG id | Point of the demo |

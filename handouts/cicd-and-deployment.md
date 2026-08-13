@@ -14,7 +14,7 @@ Command index: [`student-commands.md`](student-commands.md) §2
 | In a company | What we show here |
 |--------------|-------------------|
 | PR pipeline builds and tests a **dev** warehouse | **dbt CI** → `dbt build --target dev` → schema `ANALYTICS_DEV` |
-| A **gate** blocks merge/release if must-pass tests fail | Second CI job: `dbt test --select tag:critical` |
+| A **gate** check fails if must-pass tests fail | Second CI job: `dbt test --select tag:critical` (merge is blocked only if branch protection requires that check) |
 | Deploy **promotes** to production | **dbt Deploy Prod** → `dbt build --target prod` → schema `ANALYTICS` |
 | Prod is not “the same table moved” | Two copies of `FCT_ORDERS` in two schemas |
 
@@ -135,7 +135,7 @@ If prod was never deployed, the second query errors (`object does not exist`) �
 | Question | Answer |
 |----------|--------|
 | Why is CI green with WARN? | warn_only tests are heads-up. `dbt build` exits 0 when ERROR=0. |
-| Why a second CI job? | Same idea as production: **build** then a **must-pass gate**. |
+| Why a second CI job? | Same idea as production: **build** then a **must-pass gate**. The gate fails the Actions check; whether merge is blocked depends on branch protection. |
 | Did my table “move” to prod? | No. Prod is a second build into `ANALYTICS`. |
 | Gate vs Airflow? | Same selection: `tag:critical`. warn_only is not in the gate. |
 
@@ -147,3 +147,4 @@ If prod was never deployed, the second query errors (`object does not exist`) �
 - [ ] Snowflake worksheet with the two `COUNT(*)` queries  
 - [ ] `dbt-ci.yml` / `dbt-deploy.yml` / `profiles.yml.example` ready to show  
 - [ ] Secrets already set on the student GitHub repo  
+- [ ] Prefer one live demo PR at a time (shared `ANALYTICS_DEV`)

@@ -162,13 +162,19 @@ dbt build --target prod         # writes into ANALYTICS (separate copy)
 
 ```text
 1. Snowflake RAW already loaded (trainer)
-2. dbt build --target dev          → ANALYTICS_DEV
-3. GitHub Actions on PR            → dbt build --target dev (CI)
-4. Merge to main                   → dbt build --target prod (deploy)
-5. Airflow DAG                     → dbt run then dbt test (tag:critical)
+2. dbt build --target dev                    → ANALYTICS_DEV
+3. GitHub PR → dbt CI
+      job 1: Build (dev)                     → ANALYTICS_DEV
+      job 2: Gate (critical tests)           → tag:critical must pass
+4. Merge to main → dbt Deploy Prod
+      build + critical gate                  → ANALYTICS
+5. Airflow (three class DAGs)
+      demo_schedule_retries                  → schedule + retries
+      dbt_core_commands                      → run / critical / build / docs
+      dbt_orchestrated_pipeline              → layered run + gates + publish
 ```
 
-Airflow does not replace dbt models; it **schedules** the same project.
+Airflow does not replace dbt models; it **schedules** the same project (see [`airflow-dags.md`](airflow-dags.md)).
 
 ---
 

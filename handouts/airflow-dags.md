@@ -132,7 +132,7 @@ WARN=2 in a full build does **not** mean Airflow is hiding bad data — those te
 4. **Trigger** (play button).  
 5. Click a task → **Log**.
 
-Older files `dbt_core_run_test` / `dbt_core_e2e_pipeline` may still appear if copied earlier. Use the **three DAGs above** for class.
+Older `dbt_core_run_test` / `dbt_core_e2e_pipeline` files were removed from the repo. If they still show in your UI from an earlier copy, delete them from `$AIRFLOW_HOME/dags/` and re-copy using [`airflow-install.md`](airflow-install.md).
 
 ---
 
