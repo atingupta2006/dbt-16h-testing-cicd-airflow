@@ -417,7 +417,7 @@ SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;
 ## 3. Airflow + dbt Core
 
 **Install Airflow first (separate document):** [`airflow-install.md`](airflow-install.md)  
-(venv, `pip` + constraints, `AIRFLOW_HOME`, DAG symlinks, `DBT_*`, start UI).
+(venv, `pip` + constraints, `AIRFLOW_HOME`, copy DAGs, `DBT_*`, start UI).
 
 ### Files
 

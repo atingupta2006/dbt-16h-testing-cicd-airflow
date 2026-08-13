@@ -27,7 +27,7 @@ airflow version
 
 ---
 
-## 2. Wire DAGs + dbt paths (once per machine / after clone)
+## 2. Copy DAGs + set dbt paths (once per machine / after clone)
 
 From **repo root** (`dbt-16h-testing-cicd-airflow`):
 
@@ -36,16 +36,17 @@ export AIRFLOW_HOME=~/training/airflow_home
 source ~/training/venvs/airflow/bin/activate
 
 REPO_DIR="$(pwd)"
-for f in "$REPO_DIR"/airflow/dags/*.py; do
-  ln -sfn "$f" "$AIRFLOW_HOME/dags/$(basename "$f")"
-done
+cp "$REPO_DIR"/airflow/dags/*.py "$AIRFLOW_HOME/dags/"
 
 export DBT_BIN="$REPO_DIR/dbt_project/.venv/bin/dbt"
 export DBT_PROJECT_DIR="$REPO_DIR/dbt_project"
 export DBT_ENV_FILE="$HOME/.dbt/env.sh"
 ```
 
-(dbt venv + `~/.dbt/env.sh` must already work.)
+`DBT_*` is required here (copied DAGs do not sit inside the repo).  
+dbt venv + `~/.dbt/env.sh` must already work.
+
+If Airflow is already running, **restart** it after copying DAGs (stop `standalone`, start again — or restart the `tmux` session).
 
 ---
 
@@ -76,3 +77,5 @@ export DBT_BIN="$(pwd)/dbt_project/.venv/bin/dbt"
 export DBT_PROJECT_DIR="$(pwd)/dbt_project"
 export DBT_ENV_FILE="$HOME/.dbt/env.sh"
 ```
+
+Re-copy DAGs after `git pull` if DAG files changed, then restart Airflow if it is running.

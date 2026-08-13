@@ -1,6 +1,7 @@
 """Shared path defaults for demo DAGs.
 
-Override with env vars on any machine:
+When DAG files are *copied* into AIRFLOW_HOME/dags, set these env vars
+(defaults based on __file__ will not point at the git repo):
 
   DBT_PROJECT_DIR  absolute path to dbt_project/
   DBT_BIN          absolute path to dbt executable in the dbt venv
