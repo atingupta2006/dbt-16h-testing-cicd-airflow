@@ -4,8 +4,6 @@ One chain for the final module: **dataset → tests you already know → CI/depl
 
 **No new testing ideas** — reuse `critical` / `warn_only` from Module 1. This walkthrough **connects** pieces you already practiced.
 
-| Typical time | ~3–3.5 hours (with discussion) |
-|--------------|--------------------------------|
 | Repo | https://github.com/atingupta2006/dbt-16h-testing-cicd-airflow |
 
 ### Companion docs (use when a step needs detail)
@@ -46,7 +44,7 @@ Airflow: schedule / task order / parallel → dbt commands → layered orchestra
 
 ---
 
-## E1 — Dataset + tags (~20 min)
+## E1 — Dataset + tags
 
 **Goal:** One shared picture of the warehouse and why two tag groups exist.
 
@@ -66,7 +64,7 @@ Airflow: schedule / task order / parallel → dbt commands → layered orchestra
 
 ---
 
-## E2 — Local dbt refresh (~20–25 min)
+## E2 — Local dbt refresh
 
 **Goal:** Prove the project still builds on **dev** before touching GitHub or Airflow.
 
@@ -98,7 +96,7 @@ dbt test --select tag:critical
 
 ---
 
-## E3 — CI/CD + three strategies (~45–50 min)
+## E3 — CI/CD + three strategies
 
 **Goal:** Show Git-based CI on a PR, then prod deploy on merge — and name the three strategies out loud.
 
@@ -140,7 +138,7 @@ Merge to main →  Deploy Prod →  one job: Deploy (prod) →  ANALYTICS
 
 ---
 
-## E4 — Snowflake proof (~15 min)
+## E4 — Snowflake proof
 
 **Goal:** Prove strategy 3 with two queries (two schemas, two copies of the mart).
 
@@ -161,7 +159,7 @@ SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;
 
 ---
 
-## E5 — Airflow tour (~40–45 min)
+## E5 — Airflow tour
 
 **Goal:** Learn Airflow vocabulary with small DAGs, then run dbt once from Airflow.
 
@@ -195,7 +193,7 @@ Done. PASS=3 WARN=0 ERROR=0
 
 ---
 
-## E6 — Orchestration (~35–40 min)
+## E6 — Orchestration
 
 **Goal:** One end-to-end DAG: layered run → hard gate → heads-up + docs → publish stub.
 
@@ -233,7 +231,7 @@ raw_data_ready → run_staging → run_intermediate → run_marts → test_criti
 
 ---
 
-## E7 — Failure drill (~20 min)
+## E7 — Failure drill
 
 **Goal:** Prove the gate: break **critical** → red; restore → green.
 
@@ -249,7 +247,7 @@ Use the same idea as Module 1 (temporarily break a **critical** test — severit
 4. Restore the change.  
 5. Re-run → critical green again.
 
-**B — CI (if time)**
+**B — CI (optional)**
 
 1. Push a change that fails a critical check on a branch.  
 2. PR → **Build (dev)** red.  
