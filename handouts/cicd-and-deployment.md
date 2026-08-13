@@ -57,7 +57,8 @@ Open **Actions** (or the Checks tab on the PR). You should see **two boxes** on 
 | **Build (dev)** | debug → parse → `dbt build --target dev` | Models + all tests ran on `ANALYTICS_DEV`. **WARN=2** on warn_only tests is OK if **ERROR=0**. |
 | **Gate (critical tests)** | `dbt test --select tag:critical` | Must-pass tests only. Expect **WARN=0 ERROR=0**. |
 
-The gate job also uploads `run_results.json` / `manifest.json` as an artifact (optional to open).
+**Artifact (optional):** the Gate job also uploads `run_results.json` and `manifest.json` from `dbt_project/target/`.  
+In Actions: open the run → **Artifacts** → `dbt-ci-run-results`. These are dbt’s machine-readable results (what ran / passed). You do **not** need them for class — the job log summary is enough.
 
 **Does `dbt build` already run critical tests?** Yes. `dbt build` runs models **and** their tests (including `tag:critical`). If a critical test fails, **Build (dev)** is already red.
 
