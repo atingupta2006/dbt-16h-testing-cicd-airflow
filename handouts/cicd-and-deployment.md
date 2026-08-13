@@ -9,6 +9,19 @@ Command index: [`student-commands.md`](student-commands.md) §2
 
 ---
 
+## What “gate” means
+
+A **gate** is a **must-pass quality check** after the build.
+
+- It is **not** a special dbt command — here it is a GitHub Actions **job** (or step) that runs `dbt test --select tag:critical`.
+- **Build** = run the project (may show WARN).  
+- **Gate** = only must-pass tests; expect `WARN=0 ERROR=0`.
+- If the gate fails, the Actions check is **red**. Whether that **blocks merging** the PR depends on GitHub branch protection (optional).
+
+Same idea on deploy: after `dbt build --target prod`, the critical-test step is the **prod gate**.
+
+---
+
 ## At work vs in this class
 
 | In a company | What we show here |
@@ -124,7 +137,7 @@ If prod was never deployed, the second query errors (`object does not exist`) �
 | Term | Meaning here |
 |------|----------------|
 | **Job** | A box on the Actions graph (own machine, own checkout) |
-| **Gate** | A job/step that must pass (critical tests) before you treat the run as good |
+| **Gate** | A must-pass check after the build (here: `dbt test --select tag:critical`). Not a dbt keyword — the job/step name we use for that check |
 | **Artifact** | A file GitHub saves from the job (here: dbt `run_results.json`) |
 | **Target** | dbt `dev` or `prod` in `profiles.yml` (different schemas) |
 
