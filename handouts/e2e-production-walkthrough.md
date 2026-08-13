@@ -4,7 +4,7 @@ One chain for the final module: **dataset → tests you already know → CI/depl
 
 **No new testing ideas** — reuse `critical` / `warn_only` from Module 1. This walkthrough **connects** pieces you already practiced.
 
-| Repo | https://github.com/atingupta2006/dbt-16h-testing-cicd-airflow |
+**Repo:** https://github.com/atingupta2006/dbt-16h-testing-cicd-airflow
 
 ### Companion docs (use when a step needs detail)
 
