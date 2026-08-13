@@ -1,12 +1,13 @@
-"""DAG 1 — schedule + retries (Olist RAW check).
+"""01_check_raw_freshness - schedule + retries (Olist RAW check).
 
 Purpose
+  Run this DAG first in class.
   Show @daily schedule and automatic retries. One real check task (no dbt).
 
 Flow
   check_raw_olist_freshness
-    → confirms sample CSVs exist, are non-empty, and have key columns
-    → on failure, Airflow retries (see default_args)
+    -> confirms sample CSVs exist, are non-empty, and have key columns
+    -> on failure, Airflow retries (see default_args)
 
 Class tip: Trigger now; do not wait for the daily schedule.
 """
@@ -54,7 +55,7 @@ def check_raw_olist_freshness() -> str:
     return summary
 
 
-# Shared task settings — retries apply when the Python check raises
+# Shared task settings - retries apply when the Python check raises
 default_args = {
     "owner": "data-team",
     "retries": 2,  # after a failure, try again up to 2 more times
@@ -62,7 +63,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="demo_schedule_retries",
+    dag_id="01_check_raw_freshness",
     description="Olist: daily RAW freshness check (schedule + retries)",
     start_date=datetime(2024, 1, 1),  # Airflow needs a start; catchup is off
     schedule="@daily",  # would run once per day if left unattended

@@ -169,12 +169,12 @@ dbt build --target prod         # writes into ANALYTICS (separate copy)
 4. Merge to main → dbt Deploy Prod
       one job: dbt build --target prod         → ANALYTICS
 5. Airflow
-      example_* (if present)             → Airflow’s own samples
-      demo_schedule_retries              → daily RAW freshness + retries
-      demo_task_order                    → validate → quarantine → publish
-      demo_parallel_join                 → parallel Olist ingest → join
-      dbt_core_commands                  → run / critical / build / docs
-      dbt_orchestrated_pipeline          → layered run + gates + publish
+      example_* (if present)              → Airflow’s own samples
+      01_check_raw_freshness              → daily RAW freshness + retries
+      02_prepare_raw_ordered              → validate → quarantine → publish
+      03_ingest_parallel_join             → parallel Olist ingest → join
+      04_dbt_commands_sequence            → run / critical / build / docs
+      05_dbt_layered_orchestration        → layered run + gates + publish
 ```
 
 Airflow does not replace dbt models; it **schedules** the same project (see [`airflow-dags.md`](airflow-dags.md)).

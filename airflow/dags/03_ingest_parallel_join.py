@@ -1,15 +1,16 @@
-"""DAG 3 — parallel ingest, then join.
+"""03_ingest_parallel_join - parallel ingest, then join.
 
 Purpose
+  Run after 02_prepare_raw_ordered.
   Show two tasks that can run at the same time, then one task that waits for both.
 
 Flow
   ingest_orders ──┐
-                  ├──→ join_orders_payments → mark_ready_for_dbt
+                  ├──-> join_orders_payments -> mark_ready_for_dbt
   ingest_payments ┘
 
   1) Copy orders.csv and payments.csv into landing/ (in parallel)
-  2) Join on order_id → stg_orders_payments.csv
+  2) Join on order_id -> stg_orders_payments.csv
   3) Write READY_FOR_DBT marker (handoff to later dbt DAGs)
 """
 
@@ -29,7 +30,7 @@ def ingest_orders() -> str:
     time.sleep(2)  # short pause so the UI Graph clearly shows parallel work
     dest = copy_sample_to_landing("orders.csv")
     n = max(0, sum(1 for _ in dest.open(encoding="utf-8")) - 1)
-    msg = f"Ingested orders → {dest} ({n} rows)"
+    msg = f"Ingested orders -> {dest} ({n} rows)"
     print(msg)
     return msg
 
@@ -39,7 +40,7 @@ def ingest_payments() -> str:
     time.sleep(2)
     dest = copy_sample_to_landing("payments.csv")
     n = max(0, sum(1 for _ in dest.open(encoding="utf-8")) - 1)
-    msg = f"Ingested payments → {dest} ({n} rows)"
+    msg = f"Ingested payments -> {dest} ({n} rows)"
     print(msg)
     return msg
 
@@ -49,7 +50,7 @@ def join_orders_payments() -> str:
     orders = read_csv(landing_dir() / "orders.csv")
     payments = read_csv(landing_dir() / "payments.csv")
 
-    # One order can have many payment rows — add them up
+    # One order can have many payment rows - add them up
     pay_by_order: dict[str, float] = {}
     for row in payments:
         oid = row["order_id"]
@@ -73,7 +74,7 @@ def join_orders_payments() -> str:
         joined,
         ["order_id", "customer_id", "order_status", "total_payment_value"],
     )
-    msg = f"Joined {len(joined)} orders → {out}"
+    msg = f"Joined {len(joined)} orders -> {out}"
     print(msg)
     return msg
 
@@ -88,10 +89,10 @@ def mark_ready_for_dbt() -> str:
     marker.write_text(
         f"ready_at_utc={datetime.utcnow().isoformat()}Z\n"
         f"staging_file={stg}\n"
-        f"next=dbt_core_commands / dbt_orchestrated_pipeline\n",
+        f"next=04_dbt_commands_sequence / 05_dbt_layered_orchestration\n",
         encoding="utf-8",
     )
-    msg = f"Ready marker written → {marker}"
+    msg = f"Ready marker written -> {marker}"
     print(msg)
     return msg
 
@@ -103,8 +104,8 @@ default_args = {
 }
 
 with DAG(
-    dag_id="demo_parallel_join",
-    description="Olist: parallel CSV ingest → join → ready for dbt",
+    dag_id="03_ingest_parallel_join",
+    description="Olist: parallel CSV ingest -> join -> ready for dbt",
     start_date=datetime(2024, 1, 1),
     schedule=None,
     catchup=False,

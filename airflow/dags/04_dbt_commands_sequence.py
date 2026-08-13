@@ -1,10 +1,11 @@
-"""DAG 4 — run dbt commands from Airflow (in order).
+"""04_dbt_commands_sequence - run dbt commands from Airflow (in order).
 
 Purpose
+  Run after the basics DAGs (01-03).
   Show Airflow calling the same dbt CLI you use in the terminal.
 
 Flow
-  dbt_run → dbt_test_critical → dbt_build → dbt_docs_generate
+  dbt_run -> dbt_test_critical -> dbt_build -> dbt_docs_generate
 
 Needs DBT_BIN, DBT_PROJECT_DIR, DBT_ENV_FILE in the Airflow process
 (see handouts/airflow-install.md).
@@ -24,8 +25,8 @@ default_args = {
 }
 
 with DAG(
-    dag_id="dbt_core_commands",
-    description="dbt run → critical test → build → docs generate",
+    dag_id="04_dbt_commands_sequence",
+    description="dbt run -> critical test -> build -> docs generate",
     start_date=datetime(2024, 1, 1),
     schedule=None,  # Trigger from the UI in class
     catchup=False,
@@ -39,7 +40,7 @@ with DAG(
         bash_command=dbt_bash("run --target dev"),
     )
 
-    # 2) Must-pass tests only (tag:critical → severity error)
+    # 2) Must-pass tests only (tag:critical -> severity error)
     dbt_test_critical = BashOperator(
         task_id="dbt_test_critical",
         bash_command=dbt_bash("test --target dev --select tag:critical"),

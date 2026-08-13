@@ -1,12 +1,13 @@
-"""DAG 2 — task order (validate → quarantine → publish).
+"""02_prepare_raw_ordered - task order (validate -> quarantine -> publish).
 
 Purpose
+  Run after 01_check_raw_freshness.
   Show that arrows (>>) mean “must finish before the next step.”
 
 Flow
-  1) validate_raw_files   — required CSVs exist and have rows
-  2) quarantine_bad_rows  — split zero/blank payments into quarantine vs clean
-  3) publish_raw_ready    — write a RAW_READY marker file
+  1) validate_raw_files   - required CSVs exist and have rows
+  2) quarantine_bad_rows  - split zero/blank payments into quarantine vs clean
+  3) publish_raw_ready    - write a RAW_READY marker file
 
 Outputs land under AIRFLOW_HOME/olist_work/.
 """
@@ -37,7 +38,7 @@ def validate_raw_files() -> str:
 
     out = work_dir() / "validate_report.json"
     out.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    msg = f"Validated {len(report)} files → {out}"
+    msg = f"Validated {len(report)} files -> {out}"
     print(msg)
     return msg
 
@@ -53,7 +54,7 @@ def quarantine_bad_rows() -> str:
         try:
             value = float(raw_val) if raw_val else 0.0
         except ValueError:
-            # Non-numeric value → treat as bad
+            # Non-numeric value -> treat as bad
             bad.append(row)
             continue
         if value <= 0:
@@ -67,7 +68,7 @@ def quarantine_bad_rows() -> str:
     write_csv(q_path, bad, fields)
     write_csv(clean_path, good, fields)
 
-    msg = f"Quarantined {len(bad)} row(s) → {q_path}; clean {len(good)} → {clean_path}"
+    msg = f"Quarantined {len(bad)} row(s) -> {q_path}; clean {len(good)} -> {clean_path}"
     print(msg)
     return msg
 
@@ -93,8 +94,8 @@ default_args = {
 }
 
 with DAG(
-    dag_id="demo_task_order",
-    description="Olist: validate RAW → quarantine → publish ready (ordered)",
+    dag_id="02_prepare_raw_ordered",
+    description="Olist: validate RAW -> quarantine -> publish ready (ordered)",
     start_date=datetime(2024, 1, 1),
     schedule=None,  # run only when Triggered (no cron)
     catchup=False,

@@ -1,13 +1,14 @@
-"""DAG 5 — layered dbt orchestration (end-to-end shape).
+"""05_dbt_layered_orchestration - layered dbt end-to-end shape.
 
 Purpose
+  Run last - full layered orchestration.
   Run dbt by layer, gate on critical tests, then warn_only + docs in parallel,
   then a publish stub.
 
 Flow
-  raw_data_ready → staging → intermediate → marts → test_critical
-                       test_critical → test_warn_only → publish_ready
-                       test_critical → docs_generate  → publish_ready
+  raw_data_ready -> staging -> intermediate -> marts -> test_critical
+                       test_critical -> test_warn_only -> publish_ready
+                       test_critical -> docs_generate  -> publish_ready
 
 Notes
   critical  = hard gate (must pass)
@@ -32,7 +33,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id="dbt_orchestrated_pipeline",
+    dag_id="05_dbt_layered_orchestration",
     description="Layered dbt run, critical gate, warn_only, docs, publish",
     start_date=datetime(2024, 1, 1),
     schedule=None,
@@ -58,13 +59,13 @@ with DAG(
         bash_command=dbt_bash("run --target dev --select tag:marts"),
     )
 
-    # Hard gate — fail here and publish should not look “clean”
+    # Hard gate - fail here and publish should not look “clean”
     test_critical = BashOperator(
         task_id="test_critical",
         bash_command=dbt_bash("test --target dev --select tag:critical"),
     )
 
-    # Soft checks — dirty RAW rows may WARN; ERROR should stay 0
+    # Soft checks - dirty RAW rows may WARN; ERROR should stay 0
     test_warn_only = BashOperator(
         task_id="test_warn_only",
         bash_command=dbt_bash("test --target dev --select tag:warn_only"),

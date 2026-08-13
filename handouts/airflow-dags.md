@@ -3,9 +3,17 @@
 Install first: [`airflow-install.md`](airflow-install.md)  
 Commands index: [`student-commands.md`](student-commands.md) §3
 
-Work in this order: **DAG 1 → 2 → 3 → 4 → 5**.
+Work in this **numbered** order (file name = DAG id):
 
-Before you start: copy the course DAG `.py` files into `$AIRFLOW_HOME/dags` (see install), restart Airflow if it was already running, and set `DBT_*` in the shell that starts Airflow (needed from DAG 4 onward).
+| Order | DAG id | Purpose |
+|------:|--------|---------|
+| 01 | `01_check_raw_freshness` | Daily RAW file check + schedule/retries |
+| 02 | `02_prepare_raw_ordered` | Validate → quarantine → publish (ordered) |
+| 03 | `03_ingest_parallel_join` | Parallel ingest → join → ready |
+| 04 | `04_dbt_commands_sequence` | dbt run → critical → build → docs |
+| 05 | `05_dbt_layered_orchestration` | Layered dbt + gates + publish |
+
+Before you start: copy the course DAG `.py` files into `$AIRFLOW_HOME/dags` (see install), restart Airflow if it was already running, and set `DBT_*` in the shell that starts Airflow (needed from DAG 04 onward).
 
 ---
 
@@ -41,11 +49,11 @@ If you see **no** `example_*` DAGs, examples were turned off in config — use t
 
 ---
 
-## DAG 1 — `demo_schedule_retries`
+## DAG 1 — `01_check_raw_freshness`
 
 **Why:** first look at Airflow — schedule and retries. Does **not** call dbt.
 
-**File:** `airflow/dags/demo_schedule_retries.py`
+**File:** `airflow/dags/01_check_raw_freshness.py`
 
 **Story:** a **daily** job that checks Olist **sample** RAW CSVs exist, are non-empty, and have required headers. If the check fails, Airflow **retries**.
 
@@ -61,16 +69,16 @@ Install must copy `airflow/sample_data/*.csv` into `$AIRFLOW_HOME/sample_data` (
 
 In class, **Trigger** it so you see a run now (do not wait for the daily schedule).
 
-**Do:** UI → `demo_schedule_retries` → Graph → Trigger → task Log.  
+**Do:** UI → `01_check_raw_freshness` → Graph → Trigger → task Log.  
 **Success:** green; log shows `OK orders.csv` / `OK payments.csv` / `OK customers.csv` with row counts.
 
 ---
 
-## DAG 2 — `demo_task_order`
+## DAG 2 — `02_prepare_raw_ordered`
 
 **Why:** how **order** works — one task after another.
 
-**File:** `airflow/dags/demo_task_order.py`
+**File:** `airflow/dags/02_prepare_raw_ordered.py`
 
 **Story:** validate sample RAW → quarantine zero `payment_value` rows to a CSV → write a `RAW_READY` marker under `$AIRFLOW_HOME/olist_work/`.
 
@@ -86,16 +94,16 @@ validate_raw_files → quarantine_bad_rows → publish_raw_ready
 | `quarantine_bad_rows` | Writes `quarantine_zero_payments.csv` + `payments_clean.csv` |
 | `publish_raw_ready` | Writes marker file `olist_work/RAW_READY` |
 
-**Do:** UI → `demo_task_order` → Graph → Trigger → open each Log.  
+**Do:** UI → `02_prepare_raw_ordered` → Graph → Trigger → open each Log.  
 **Success:** all green; work files appear under `$AIRFLOW_HOME/olist_work/`.
 
 ---
 
-## DAG 3 — `demo_parallel_join`
+## DAG 3 — `03_ingest_parallel_join`
 
 **Why:** some tasks can run **at the same time**, then a later task waits for all of them.
 
-**File:** `airflow/dags/demo_parallel_join.py`
+**File:** `airflow/dags/03_ingest_parallel_join.py`
 
 **Story:** copy `orders.csv` and `payments.csv` into landing **in parallel**, join on `order_id`, write staging CSV, then a ready marker.
 
@@ -113,16 +121,16 @@ ingest_payments ┘
 | `join_orders_payments` | Build `olist_work/stg_orders_payments.csv` |
 | `mark_ready_for_dbt` | Write `olist_work/READY_FOR_DBT` |
 
-**Do:** UI → `demo_parallel_join` → Graph → Trigger.  
+**Do:** UI → `03_ingest_parallel_join` → Graph → Trigger.  
 **Success:** both ingest green, then join, then ready; open Log for row counts / output paths.
 
 ---
 
-## DAG 4 — `dbt_core_commands`
+## DAG 4 — `04_dbt_commands_sequence`
 
 **Why:** Airflow runs **dbt** commands in order.
 
-**File:** `airflow/dags/dbt_core_commands.py`
+**File:** `airflow/dags/04_dbt_commands_sequence.py`
 
 **Graph:**
 
@@ -137,15 +145,15 @@ dbt_run → dbt_test_critical → dbt_build → dbt_docs_generate
 | `dbt_build` | `dbt build --target dev` | Full build; `WARN=2` OK if `ERROR=0` |
 | `dbt_docs_generate` | `dbt docs generate` | Files under `dbt_project/target/` |
 
-**Do:** UI → `dbt_core_commands` → Graph → Trigger → open `dbt_test_critical` Log.
+**Do:** UI → `04_dbt_commands_sequence` → Graph → Trigger → open `dbt_test_critical` Log.
 
 ---
 
-## DAG 5 — `dbt_orchestrated_pipeline`
+## DAG 5 — `05_dbt_layered_orchestration`
 
 **Why:** layered dbt run, quality checks, then a publish stub (full orchestration).
 
-**File:** `airflow/dags/dbt_orchestrated_pipeline.py`
+**File:** `airflow/dags/05_dbt_layered_orchestration.py`
 
 **Graph:**
 
@@ -164,5 +172,5 @@ raw_data_ready → run_staging → run_intermediate → run_marts → test_criti
 | `docs_generate` | `dbt docs generate` |
 | `publish_ready` | “Downstream may refresh” |
 
-**Do:** UI → `dbt_orchestrated_pipeline` → Graph → Trigger → check `test_critical` and `test_warn_only` logs.  
+**Do:** UI → `05_dbt_layered_orchestration` → Graph → Trigger → check `test_critical` and `test_warn_only` logs.  
 **Success:** all tasks green.

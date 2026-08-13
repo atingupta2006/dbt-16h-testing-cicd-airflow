@@ -425,12 +425,11 @@ SELECT COUNT(*) FROM OLIST_DB.ANALYTICS.FCT_ORDERS;      -- prod (after deploy)
 | Order | DAG id | What it shows |
 |------:|--------|---------------|
 | — | `example_*` (if listed) | Airflow’s own sample DAGs |
-| 1 | `demo_schedule_retries` | Daily RAW file/header check + retries |
-| 2 | `demo_task_order` | Validate → quarantine CSV → RAW_READY |
-| 3 | `demo_parallel_join` | Parallel ingest → CSV join → ready |
-
-| 4 | `dbt_core_commands` | dbt run / critical / build / docs |
-| 5 | `dbt_orchestrated_pipeline` | Layered run + gates + publish |
+| 01 | `01_check_raw_freshness` | Daily RAW file/header check + retries |
+| 02 | `02_prepare_raw_ordered` | Validate → quarantine CSV → RAW_READY |
+| 03 | `03_ingest_parallel_join` | Parallel ingest → CSV join → ready |
+| 04 | `04_dbt_commands_sequence` | dbt run / critical / build / docs |
+| 05 | `05_dbt_layered_orchestration` | Layered run + gates + publish |
 
 ---
 
@@ -448,4 +447,4 @@ dbt test --select tag:critical
 
 **Expect:** `PASS=35 WARN=2 ERROR=0` then `PASS=3 WARN=0 ERROR=0`.
 
-Then CI/deploy ([`cicd-and-deployment.md`](cicd-and-deployment.md)), Snowflake two-schema counts, then Airflow DAG 1 → 2 → 3 ([`airflow-dags.md`](airflow-dags.md)). Star DAG: `dbt_orchestrated_pipeline`.
+Then CI/deploy ([`cicd-and-deployment.md`](cicd-and-deployment.md)), Snowflake two-schema counts, then Airflow **01 → 05** ([`airflow-dags.md`](airflow-dags.md)). Star DAG: `05_dbt_layered_orchestration`.
