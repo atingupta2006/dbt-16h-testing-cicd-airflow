@@ -78,7 +78,8 @@ with DAG(
         + '; echo "Docs catalog: target/index.html (ANALYTICS_DEV models)"',
     )
 
-    # Placeholder: “downstream consumers may refresh”
+    # Last task = “pipeline finished; marts are safe to use.”
+    # Class: echo only (no Tableau/Power BI). At work: notify BI / refresh a dashboard.
     publish_ready = BashOperator(
         task_id="publish_ready",
         bash_command='echo "Publish ready: OLIST_DB.ANALYTICS_DEV.FCT_ORDERS"',

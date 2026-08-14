@@ -216,7 +216,7 @@ raw_data_ready → run_staging → run_intermediate → run_marts → test_criti
 | `test_critical` | **Hard gate** — must stay green |
 | `test_warn_only` | Heads-up — WARN OK if `ERROR=0` |
 | `docs_generate` | `dbt docs generate` (runs in parallel with warn_only after critical) |
-| `publish_ready` | Stub: “downstream may refresh” |
+| `publish_ready` | Last signal after critical + warn_only + docs. Class: **echo only** (no BI refresh). At work: “marts are safe to use.” |
 
 ### Do
 

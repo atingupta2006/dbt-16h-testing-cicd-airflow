@@ -165,12 +165,12 @@ raw_data_ready → run_staging → run_intermediate → run_marts → test_criti
 
 | Task | Role |
 |------|------|
-| `raw_data_ready` | “RAW is ready” (data already in Snowflake) |
+| `raw_data_ready` | Placeholder: RAW is already in Snowflake (no COPY in this DAG) |
 | `run_staging` / `run_intermediate` / `run_marts` | `dbt run` for that layer |
 | `test_critical` | Must-pass (`PASS=3 WARN=0 ERROR=0`) |
 | `test_warn_only` | Heads-up (`PASS=2 WARN=2 ERROR=0`) — includes the dirty-row checks |
 | `docs_generate` | `dbt docs generate` |
-| `publish_ready` | “Downstream may refresh” |
+| `publish_ready` | **Signal only** (not a real BI refresh). Echoes that `FCT_ORDERS` in `ANALYTICS_DEV` is ready. At work this would notify BI or kick a dashboard. Runs only after **both** `test_warn_only` and `docs_generate` (and those wait on `test_critical`). |
 
 **Do:** UI → `dag_05_dbt_layered_orchestration` → Graph → Trigger → check `test_critical` and `test_warn_only` logs.  
 **Success:** all tasks green.
